@@ -7,11 +7,11 @@ class GirPrinter:
         if enum_object.is_flag:
             enum_type = "flags"
         else:
-            enum_type = "extended"
+            enum_type = "enum"
 
-        print("(define-enum-" + enum_type + " " + enum_object.type_name)
+        print("(define-" + enum_type + "-extended " + enum_object.name)
         print("  (in-module \"" + enum_object.module + "\")")
-        print("  (c-name \"" + enum_object.c_type_name + "\")")
+        print("  (c-name \"" + enum_object.c_name + "\")")
         print("  (values")
 
         for member in enum_object.members:
