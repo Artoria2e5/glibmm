@@ -12,7 +12,7 @@ fi
 PREFIX="$JHBUILD_SOURCES/glib"
 ROOT_DIR="$(dirname "$0")/../.."
 OUT_DIR="$ROOT_DIR/gio/src"
+GIR_DIR="$ROOT_DIR/gir"
 
-ENUM_PL="$JHBUILD_SOURCES/glibmm/tools/enum.pl"
-$ENUM_PL "$PREFIX"/gio/*.h > "$OUT_DIR"/gio_enums.defs
-patch "$OUT_DIR"/gio_enums.defs "$OUT_DIR"/gio_enums.defs.patch
+ENUM_PY="$JHBUILD_SOURCES/glibmm/tools/defs_gen/gir-defs-generator.py"
+$ENUM_PY "$GIR_DIR"/Gio-2.0.gir > "$OUT_DIR"/gio_enums.defs

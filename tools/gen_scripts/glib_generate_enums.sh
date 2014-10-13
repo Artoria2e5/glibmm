@@ -12,10 +12,9 @@ fi
 PREFIX="$JHBUILD_SOURCES/glib"
 ROOT_DIR="$(dirname "$0")/../.."
 OUT_DIR="$ROOT_DIR/glib/src"
+GIR_DIR="$ROOT_DIR/gir"
 
-ENUM_PL="$JHBUILD_SOURCES/glibmm/tools/enum.pl"
-$ENUM_PL "$PREFIX"/glib/*.h "$PREFIX"/glib/deprecated/*.h > "$OUT_DIR"/glib_enums.defs
-patch "$OUT_DIR"/glib_enums.defs "$OUT_DIR"/glib_enums.defs.patch
-
-$ENUM_PL "$PREFIX"/gmodule/*.h > "$OUT_DIR"/gmodule_enums.defs
-$ENUM_PL "$PREFIX"/gobject/*.h > "$OUT_DIR"/gobject_enums.defs
+ENUM_PY="$JHBUILD_SOURCES/glibmm/tools/defs_gen/gir-defs-generator.py"
+$ENUM_PY "$GIR_DIR"/GLib-2.0.gir > "$OUT_DIR"/glib_enums.defs
+$ENUM_PY "$GIR_DIR"/GModule-2.0.gir > "$OUT_DIR"/gmodule_enums.defs
+$ENUM_PY "$GIR_DIR"/GObject-2.0.gir > "$OUT_DIR"/gobject_enums.defs
