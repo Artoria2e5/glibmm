@@ -27,7 +27,8 @@ def main(args):
     parser.parse_file(args[1])
     printer = GirPrinter(parser)
 
-    printer.print_enumerations()
+   # printer.print_enumerations()
+    printer.print_methods()
 
 
 if __name__ == '__main__':

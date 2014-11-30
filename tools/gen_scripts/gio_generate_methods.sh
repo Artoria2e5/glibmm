@@ -12,7 +12,8 @@ fi
 PREFIX="$JHBUILD_SOURCES/glib"
 ROOT_DIR="$(dirname "$0")/../.."
 OUT_DIR="$ROOT_DIR/gio/src"
+GIR_DIR="$ROOT_DIR/gir"
 
-H2DEF_PY="$JHBUILD_SOURCES/glibmm/tools/defs_gen/h2def.py"
-$H2DEF_PY "$PREFIX"/gio/*.h > "$OUT_DIR"/gio_methods.defs
+GENERATOR_PY="$JHBUILD_SOURCES/glibmm/tools/defs_gen/gir-defs-generator.py"
+$GENERATOR_PY "$GIR_DIR"/Gio-2.0.gir > "$OUT_DIR"/gio_methods.defs
 #patch "$OUT_DIR"/gio_methods.defs "$OUT_DIR"/gio_methods.defs.patch

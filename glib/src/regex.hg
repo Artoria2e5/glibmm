@@ -188,6 +188,7 @@ public:
   bool match_all(const Glib::ustring& string, gssize string_len, int start_position, RegexMatchFlags match_options);
 
 #m4 _CONVERSION(`gchar**',`Glib::StringArrayHandle',`Glib::StringArrayHandle($3, Glib::OWNERSHIP_DEEP)')
+#m4 _CONVERSION(`const gchar**',`Glib::StringArrayHandle',`Glib::StringArrayHandle($3, Glib::OWNERSHIP_DEEP)')
 
   _WRAP_METHOD(static Glib::StringArrayHandle split_simple(const Glib::ustring& pattern, const Glib::ustring& string, RegexCompileFlags compile_options = static_cast<RegexCompileFlags>(0), RegexMatchFlags match_options = static_cast<RegexMatchFlags>(0)), g_regex_split_simple)
   _WRAP_METHOD(Glib::StringArrayHandle split(const Glib::ustring& string, RegexMatchFlags match_options = static_cast<RegexMatchFlags>(0)), g_regex_split)

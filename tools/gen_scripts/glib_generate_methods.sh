@@ -12,10 +12,9 @@ fi
 PREFIX="$JHBUILD_SOURCES/glib"
 ROOT_DIR="$(dirname "$0")/../.."
 OUT_DIR="$ROOT_DIR/glib/src"
+GIR_DIR="$ROOT_DIR/gir"
 
-H2DEF_PY="$JHBUILD_SOURCES/glibmm/tools/defs_gen/h2def.py"
-$H2DEF_PY "$PREFIX"/glib/*.h "$PREFIX"/glib/deprecated/*.h > "$OUT_DIR"/glib_functions.defs
-patch "$OUT_DIR"/glib_functions.defs "$OUT_DIR"/glib_functions.defs.patch
-
-$H2DEF_PY "$PREFIX"/gmodule/*.h > "$OUT_DIR"/gmodule_functions.defs
-$H2DEF_PY "$PREFIX"/gobject/*.h > "$OUT_DIR"/gobject_functions.defs
+GENERATOR_PY="$JHBUILD_SOURCES/glibmm/tools/defs_gen/gir-defs-generator.py"
+$GENERATOR_PY "$GIR_DIR"/GLib-2.0.gir > "$OUT_DIR"/glib_functions.defs
+$GENERATOR_PY "$GIR_DIR"/GModule-2.0.gir > "$OUT_DIR"/gmodule_functions.defs
+$GENERATOR_PY "$GIR_DIR"/GObject-2.0.gir > "$OUT_DIR"/gobject_functions.defs

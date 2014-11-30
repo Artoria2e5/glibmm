@@ -128,6 +128,7 @@ _CONVERSION(`Glib::OptionGroup&',`GOptionGroup*',`($3).gobj()')
 dnl Bytes
 _CONVERSION(`GBytes*',`Glib::RefPtr<Glib::Bytes>',`Glib::wrap($3)')
 _CONVERSION(`GBytes*',`Glib::RefPtr<const Glib::Bytes>',`Glib::wrap($3)')
+_CONVERSION(`gconstpointer',`GBytes*',`(GBytes*)$3')
 _CONVERSION(`const Glib::RefPtr<const Glib::Bytes>&',`GBytes*',__CONVERT_CONST_REFPTR_TO_P_SUN(Glib::Bytes)))
 
 dnl ByteArray
