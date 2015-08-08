@@ -107,7 +107,7 @@ public:
    * is equivalent to:
    * @code
    * bool timeout_handler() { ... }
-   * const Glib::RefPtr<Glib::TimeoutSource> timeout_source = Glib::TimeoutSource::create(1000);
+   * const auto timeout_source = Glib::TimeoutSource::create(1000);
    * timeout_source->connect(sigc::ptr_fun(&timeout_handler));
    * timeout_source->attach(Glib::MainContext::get_default());
    * @endcode
@@ -165,7 +165,7 @@ public:
    * is equivalent to:
    * @code
    * bool timeout_handler() { ... }
-   * const Glib::RefPtr<Glib::TimeoutSource> timeout_source = Glib::TimeoutSource::create(5000);
+   * const auto timeout_source = Glib::TimeoutSource::create(5000);
    * timeout_source->connect(sigc::ptr_fun(&timeout_handler));
    * timeout_source->attach(Glib::MainContext::get_default());
    * @endcode
@@ -232,7 +232,7 @@ public:
    * is equivalent to:
    * @code
    * bool idle_handler() { ... }
-   * const Glib::RefPtr<Glib::IdleSource> idle_source = Glib::IdleSource::create();
+   * const auto idle_source = Glib::IdleSource::create();
    * idle_source->connect(sigc::ptr_fun(&idle_handler));
    * idle_source->attach(Glib::MainContext::get_default());
    * @endcode
@@ -291,7 +291,7 @@ public:
    * is equivalent to:
    * @code
    * bool io_handler(Glib::IOCondition io_condition) { ... }
-   * const Glib::RefPtr<Glib::IOSource> io_source = Glib::IOSource::create(fd, Glib::IO_IN | Glib::IO_HUP);
+   * const auto io_source = Glib::IOSource::create(fd, Glib::IO_IN | Glib::IO_HUP);
    * io_source->connect(sigc::ptr_fun(&io_handler));
    * io_source->attach(Glib::MainContext::get_default());
    * @endcode
@@ -319,7 +319,7 @@ public:
    * is equivalent to:
    * @code
    * bool io_handler(Glib::IOCondition io_condition) { ... }
-   * const Glib::RefPtr<Glib::IOSource> io_source = Glib::IOSource::create(channel, Glib::IO_IN | Glib::IO_HUP);
+   * const auto io_source = Glib::IOSource::create(channel, Glib::IO_IN | Glib::IO_HUP);
    * io_source->connect(sigc::ptr_fun(&io_handler));
    * io_source->attach(Glib::MainContext::get_default());
    * @endcode
@@ -404,6 +404,10 @@ class MainContext
 public:
   typedef Glib::MainContext  CppObjectType;
   typedef GMainContext       BaseObjectType;
+
+  // noncopyable
+  MainContext(const MainContext& other) = delete;
+  MainContext& operator=(const MainContext& other) = delete;
 
   /** Creates a new MainContext.
    * @return The new MainContext.
@@ -587,11 +591,6 @@ private:
   // Glib::MainContext can neither be constructed nor deleted.
   MainContext();
   void operator delete(void*, std::size_t);
-
-  // noncopyable
-  MainContext(const MainContext& other);
-  MainContext& operator=(const MainContext& other);
-
 };
 
 /** @relates Glib::MainContext */
@@ -661,6 +660,10 @@ class Source
 public:
   typedef Glib::Source  CppObjectType;
   typedef GSource       BaseObjectType;
+
+  // noncopyable
+  Source(const Source&) = delete;
+  Source& operator=(const Source&) = delete;
 
   static Glib::RefPtr<Source> create() /* = 0 */;
 
@@ -802,13 +805,7 @@ public:
   static sigc::slot_base* get_slot_from_connection_node(void* data);
   // Used by derived Source classes in other files.
   static sigc::slot_base* get_slot_from_callback_data(void* data);
-
-private:
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
-
-  // noncopyable
-  Source(const Source&);
-  Source& operator=(const Source&);
 };
 
 

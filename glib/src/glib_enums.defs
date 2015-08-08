@@ -963,23 +963,65 @@
   (c-name "GVariantParseError")
   (values
     '("failed" "G_VARIANT_PARSE_ERROR_FAILED" "0")
-    '("basic_type_expected" "G_VARIANT_PARSE_ERROR_BASIC_TYPE_EXPECTED" "1")
-    '("cannot_infer_type" "G_VARIANT_PARSE_ERROR_CANNOT_INFER_TYPE" "2")
-    '("definite_type_expected" "G_VARIANT_PARSE_ERROR_DEFINITE_TYPE_EXPECTED" "3")
-    '("input_not_at_end" "G_VARIANT_PARSE_ERROR_INPUT_NOT_AT_END" "4")
-    '("invalid_character" "G_VARIANT_PARSE_ERROR_INVALID_CHARACTER" "5")
-    '("invalid_format_string" "G_VARIANT_PARSE_ERROR_INVALID_FORMAT_STRING" "6")
-    '("invalid_object_path" "G_VARIANT_PARSE_ERROR_INVALID_OBJECT_PATH" "7")
-    '("invalid_signature" "G_VARIANT_PARSE_ERROR_INVALID_SIGNATURE" "8")
-    '("invalid_type_string" "G_VARIANT_PARSE_ERROR_INVALID_TYPE_STRING" "9")
-    '("no_common_type" "G_VARIANT_PARSE_ERROR_NO_COMMON_TYPE" "10")
-    '("number_out_of_range" "G_VARIANT_PARSE_ERROR_NUMBER_OUT_OF_RANGE" "11")
-    '("number_too_big" "G_VARIANT_PARSE_ERROR_NUMBER_TOO_BIG" "12")
-    '("type_error" "G_VARIANT_PARSE_ERROR_TYPE_ERROR" "13")
-    '("unexpected_token" "G_VARIANT_PARSE_ERROR_UNEXPECTED_TOKEN" "14")
-    '("unknown_keyword" "G_VARIANT_PARSE_ERROR_UNKNOWN_KEYWORD" "15")
-    '("unterminated_string_constant" "G_VARIANT_PARSE_ERROR_UNTERMINATED_STRING_CONSTANT" "16")
-    '("value_expected" "G_VARIANT_PARSE_ERROR_VALUE_EXPECTED" "17")
+    '("basic-type-expected" "G_VARIANT_PARSE_ERROR_BASIC_TYPE_EXPECTED" "1")
+    '("cannot-infer-type" "G_VARIANT_PARSE_ERROR_CANNOT_INFER_TYPE" "2")
+    '("definite-type-expected" "G_VARIANT_PARSE_ERROR_DEFINITE_TYPE_EXPECTED" "3")
+    '("input-not-at-end" "G_VARIANT_PARSE_ERROR_INPUT_NOT_AT_END" "4")
+    '("invalid-character" "G_VARIANT_PARSE_ERROR_INVALID_CHARACTER" "5")
+    '("invalid-format-string" "G_VARIANT_PARSE_ERROR_INVALID_FORMAT_STRING" "6")
+    '("invalid-object-path" "G_VARIANT_PARSE_ERROR_INVALID_OBJECT_PATH" "7")
+    '("invalid-signature" "G_VARIANT_PARSE_ERROR_INVALID_SIGNATURE" "8")
+    '("invalid-type-string" "G_VARIANT_PARSE_ERROR_INVALID_TYPE_STRING" "9")
+    '("no-common-type" "G_VARIANT_PARSE_ERROR_NO_COMMON_TYPE" "10")
+    '("number-out-of-range" "G_VARIANT_PARSE_ERROR_NUMBER_OUT_OF_RANGE" "11")
+    '("number-too-big" "G_VARIANT_PARSE_ERROR_NUMBER_TOO_BIG" "12")
+    '("type-error" "G_VARIANT_PARSE_ERROR_TYPE_ERROR" "13")
+    '("unexpected-token" "G_VARIANT_PARSE_ERROR_UNEXPECTED_TOKEN" "14")
+    '("unknown-keyword" "G_VARIANT_PARSE_ERROR_UNKNOWN_KEYWORD" "15")
+    '("unterminated-string-constant" "G_VARIANT_PARSE_ERROR_UNTERMINATED_STRING_CONSTANT" "16")
+    '("value-expected" "G_VARIANT_PARSE_ERROR_VALUE_EXPECTED" "17")
+  )
+)
+
+;; From gwin32.h
+
+;; Original typedef:
+;; typedef enum
+;; {
+;;   G_WIN32_OS_ANY,
+;;   G_WIN32_OS_WORKSTATION,
+;;   G_WIN32_OS_SERVER,
+;; } GWin32OSType;
+
+(define-enum-extended Win32OSType
+  (in-module "G")
+  (c-name "GWin32OSType")
+  (values
+    '("any" "G_WIN32_OS_ANY" "0")
+    '("workstation" "G_WIN32_OS_WORKSTATION" "1")
+    '("server" "G_WIN32_OS_SERVER" "2")
+  )
+)
+
+;; From gthread.h
+
+;; Original typedef:
+;; typedef enum
+;; {
+;;   G_THREAD_PRIORITY_LOW,
+;;   G_THREAD_PRIORITY_NORMAL,
+;;   G_THREAD_PRIORITY_HIGH,
+;;   G_THREAD_PRIORITY_URGENT
+;; } GThreadPriority;
+
+(define-enum-extended ThreadPriority
+  (in-module "G")
+  (c-name "GThreadPriority")
+  (values
+    '("low" "G_THREAD_PRIORITY_LOW" "0")
+    '("normal" "G_THREAD_PRIORITY_NORMAL" "1")
+    '("high" "G_THREAD_PRIORITY_HIGH" "2")
+    '("urgent" "G_THREAD_PRIORITY_URGENT" "3")
   )
 )
 

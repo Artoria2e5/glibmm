@@ -41,23 +41,23 @@ int on_compare(const Glib::ValueBase& v1, const Glib::ValueBase& v2)
 
 int main(int, char**)
 {
-  const int VALUES = 10;
+  const int VALUES_COUNT = 10;
 
   Glib::init();
 
-  Glib::Value<int> value[VALUES];
+  Glib::Value<int> values[VALUES_COUNT];
   Glib::ValueArray array;
 
-  for(int i = 0; i < VALUES; i++)
+  for(int i = 0; i < VALUES_COUNT; i++)
   {
-    value[i].init(Glib::Value<int>::value_type());
-    value[i].set(i + 1); //  (i + 1) ==> Set to natural counting numbers.
-    array.prepend(value[i]);
+    values[i].init(Glib::Value<int>::value_type());
+    values[i].set(i + 1); //  (i + 1) ==> Set to natural counting numbers.
+    array.prepend(values[i]);
   }
 
   ostr << "Array members before sorting:" << std::endl;
 
-  for(int i = 0; i < VALUES; i++)
+  for(int i = 0; i < VALUES_COUNT; i++)
   {
     Glib::ValueBase value;
 
@@ -69,18 +69,18 @@ int main(int, char**)
       break;
     }
 
-    Glib::Value<int> int_val = static_cast< Glib::Value<int>& >(value);
+    auto int_val = static_cast< Glib::Value<int>& >(value);
     ostr << int_val.get() << " ";
   }
   ostr << std::endl; // End of line for list of array elements.
 
   // Sort array and remove last element:
-  array.sort(sigc::ptr_fun(&on_compare)).remove(VALUES - 1);
+  array.sort(sigc::ptr_fun(&on_compare)).remove(VALUES_COUNT - 1);
 
   ostr << "Array members after sorting without last element:" <<
     std::endl;
 
-  for(int i = 0; i < VALUES - 1; i++)
+  for(int i = 0; i < VALUES_COUNT - 1; i++)
   {
     Glib::ValueBase value;
 
@@ -92,7 +92,7 @@ int main(int, char**)
       break;
     }
 
-    Glib::Value<int> int_val = static_cast< Glib::Value<int>& >(value);
+    auto int_val = static_cast< Glib::Value<int>& >(value);
     ostr << int_val.get() << " ";
   }
   ostr << std::endl; // End of line for list of array elements.

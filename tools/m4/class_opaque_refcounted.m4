@@ -116,7 +116,7 @@ const __CNAME__* __CPPNAME__::gobj() const
 __CNAME__* __CPPNAME__::gobj_copy() const
 {
   // See the comment at the top of this file, if you want to know why the cast works.
-  __CNAME__ *const gobject = reinterpret_cast<__CNAME__*>(const_cast<__CPPNAME__*>(this));
+  const auto gobject = reinterpret_cast<__CNAME__*>(const_cast<__CPPNAME__*>(this));
   __OPAQUE_FUNC_REF`'(gobject);
   return gobject;
 }
@@ -171,11 +171,11 @@ protected:
   __CPPNAME__`'();
   void operator delete(void*, std::size_t);
 
-private:
   // noncopyable
-  __CPPNAME__`'(const __CPPNAME__&);
-  __CPPNAME__& operator=(const __CPPNAME__&);
+  __CPPNAME__`'(const __CPPNAME__&) = delete;
+  __CPPNAME__& operator=(const __CPPNAME__&) = delete;
 
+private:
 _IMPORT(SECTION_CLASS2)
 ')
 

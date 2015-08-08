@@ -15,7 +15,7 @@
 ## You should have received a copy of the GNU Lesser General Public License
 ## along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-AC_INIT([glibmm], [2.42.0],
+AC_INIT([glibmm], [2.45.41],
         [http://bugzilla.gnome.org/enter_bug.cgi?product=glibmm],
         [glibmm], [http://www.gtkmm.org/])
 AC_PREREQ([2.59])
@@ -30,7 +30,7 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AM_MAINTAINER_MODE
 AC_ARG_VAR([ACLOCAL_FLAGS], [aclocal flags, e.g. -I <macro dir>])
 
-MM_PREREQ([0.9.7])
+MM_PREREQ([0.9.8])
 MM_INIT_MODULE([glibmm-2.4])
 MM_INIT_MODULE([giomm-2.4])
 
@@ -43,6 +43,8 @@ MM_CONFIG_DOCTOOL_DIR([docs])
 AC_SUBST([LIBGLIBMM_SO_VERSION], [4:0:3])
 
 AC_PROG_CXX
+MM_AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+
 AC_DISABLE_STATIC
 LT_INIT([win32-dll])
 MM_PATH_PERL
@@ -60,7 +62,7 @@ AS_IF([test "x$enable_static" = xyes],
   AC_DEFINE([GIOMM_STATIC_LIB],  [1], [Define if giomm is built as a static library])
 ])
 
-glibreq='2.0 >= 2.42.0'
+glibreq='2.0 >= 2.45.4'
 
 GLIBMM_MODULES="sigc++-2.0 >= 2.2.10 glib-$glibreq gobject-$glibreq gmodule-$glibreq"
 GIOMM_MODULES="$GLIBMM_MODULES gio-$glibreq"
@@ -114,7 +116,7 @@ GLIBMM_ARG_ENABLE_DEBUG_REFCOUNTING
 # Evaluate the --enable-warnings=level option.
 MM_ARG_ENABLE_WARNINGS([GLIBMM_WXXFLAGS],
                        [-Wall],
-                       [-pedantic -Wall -Wextra -Wformat-security -Wno-long-long],
+                       [-pedantic -Wall -Wextra -Wformat-security -Wsuggest-override -Wshadow -Wno-long-long],
                        [G SIGCXX])
 
 # Offer the ability to omit some API from the library,

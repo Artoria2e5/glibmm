@@ -29,8 +29,8 @@ Glib::RefPtr<InputStream>
 LoadableIcon::load(int size, Glib::ustring& type, const Glib::RefPtr<Cancellable>& cancellable)
 {
   char* c_type;
-  GError* gerror = 0;
-  Glib::RefPtr<InputStream> retval =
+  GError* gerror = nullptr;
+  auto retval =
       Glib::wrap(g_loadable_icon_load(gobj(),
                  size,
                  &c_type,
@@ -50,8 +50,8 @@ Glib::RefPtr<InputStream>
 LoadableIcon::load(int size, Glib::ustring& type)
 {
   char* c_type;
-  GError* gerror = 0;
-  Glib::RefPtr<InputStream> retval =
+  GError* gerror = nullptr;
+  auto retval =
       Glib::wrap(g_loadable_icon_load(gobj(),
                  size,
                  &c_type,
@@ -74,7 +74,7 @@ LoadableIcon::load_async(int size, const SlotAsyncReady& slot, const
   // Create a copy of the slot.
   // A pointer to it will be passed through the callback's data parameter
   // and deleted in the callback.
-  SlotAsyncReady* slot_copy = new SlotAsyncReady(slot);
+  auto slot_copy = new SlotAsyncReady(slot);
 
   g_loadable_icon_load_async(gobj(),
                              size,
@@ -89,7 +89,7 @@ LoadableIcon::load_async(int size, const SlotAsyncReady& slot)
   // Create a copy of the slot.
   // A pointer to it will be passed through the callback's data parameter
   // and deleted in the callback.
-  SlotAsyncReady* slot_copy = new SlotAsyncReady(slot);
+  auto slot_copy = new SlotAsyncReady(slot);
 
   g_loadable_icon_load_async(gobj(),
                              size,

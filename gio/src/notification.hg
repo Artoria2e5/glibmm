@@ -25,6 +25,8 @@ namespace Gio
 {
 class Icon;
 
+_WRAP_ENUM(NotificationPriority, GNotificationPriority, newin "2,44")
+
 /** User Notifications (pop up messages).
  *
  * Gio::Notification is a mechanism for creating a notification to be shown
@@ -67,7 +69,8 @@ public:
   _WRAP_METHOD(void set_title(const Glib::ustring& title), g_notification_set_title)
   _WRAP_METHOD(void set_body(const Glib::ustring& body), g_notification_set_body)
   _WRAP_METHOD(void set_icon(const Glib::RefPtr<Icon>& icon), g_notification_set_icon)
-  _WRAP_METHOD(void set_urgent(bool urgent = true), g_notification_set_urgent, deprecated "This should not be used in newly-written code.")
+  _WRAP_METHOD(void set_urgent(bool urgent = true), g_notification_set_urgent, deprecated "Use set_priority() instead.")
+  _WRAP_METHOD(void set_priority(NotificationPriority priority = NOTIFICATION_PRIORITY_NORMAL), g_notification_set_priority, newin "2,44")
 
   _WRAP_METHOD(void add_button(const Glib::ustring& label, const Glib::ustring& detailed_action), g_notification_add_button)
 
@@ -76,6 +79,7 @@ public:
    * @a action will be activated with @a target as its parameter.
    *
    * @newin{2,40}
+   *
    * @param label Label of the button.
    * @param action An action name.
    * @param target @a action's parameter.
@@ -96,6 +100,7 @@ public:
    * was sent on is activated.
    *
    * @newin{2,40}
+   *
    * @param action An action name.
    * @param target @a action's parameter.
    */
@@ -106,10 +111,6 @@ public:
 
   // Ignore functions with variable-length parameter lists.
   _IGNORE(g_notification_add_button_with_target, g_notification_set_default_action_and_target)
-  // Ignore private methods
-  _IGNORE(g_notification_get_urgent, g_notification_get_button, g_notification_get_default_action)
-  _IGNORE(g_notification_get_n_buttons, g_notification_get_button_with_action, g_notification_serialize)
-  _IGNORE(g_notification_get_icon, g_notification_get_id, g_notification_get_body, g_notification_get_title)
 
   // There are no properties, signals, vfuncs.
 };

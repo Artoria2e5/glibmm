@@ -43,7 +43,7 @@ public:
   { }
 
   bool is_filename_option() const
-  { return slot_filename_ != 0; }
+  { return slot_filename_ != nullptr; }
 
   const OptionGroup::SlotOptionArgString* get_slot_string() const
   { return slot_string_; }
@@ -75,7 +75,7 @@ static gboolean g_callback_pre_parse(GOptionContext* context,
 {
   OptionContext cppContext(context, false /* take_ownership */);
 
-  OptionGroup* option_group = static_cast<OptionGroup*>(data);
+  auto option_group = static_cast<OptionGroup*>(data);
   if(!option_group)
   {
     OptionError(OptionError::FAILED, "Glib::OptionGroup: g_callback_pre_parse(): "
@@ -108,7 +108,7 @@ static void g_callback_error(GOptionContext* context,
 
   OptionContext cppContext(context, false /* take_ownership */);
 
-  OptionGroup* option_group = static_cast<OptionGroup*>(data);
+  auto option_group = static_cast<OptionGroup*>(data);
   if(option_group)
     return option_group->on_error(cppContext, *option_group);
 }
@@ -157,10 +157,9 @@ gboolean OptionGroup::post_parse_callback(GOptionContext* context,
 
   //The C args have now been given values by g_option_context_parse().
   //Convert C values to C++ values:
-  for(type_map_entries::iterator iter = option_group->map_entries_.begin();
-      iter != option_group->map_entries_.end(); ++iter)
+  for(auto& the_pair : option_group->map_entries_)
   {
-    CppOptionEntry& cpp_entry = iter->second;
+    auto& cpp_entry = the_pair.second;
     cpp_entry.convert_c_to_cpp();
   }
 
@@ -198,17 +197,17 @@ gboolean OptionGroup::option_arg_callback(const gchar* option_name, const gchar*
   if(option_name[1] == '-')
   {
     //Long option name.
-    const Glib::ustring long_option_name = Glib::ustring(option_name+2);
+    const auto long_option_name = Glib::ustring(option_name+2);
     iterFind = option_group->map_entries_.find(long_option_name);
   }
   else
   {
     //Short option name.
-    const gchar short_option_name = option_name[1];
+    const auto short_option_name = option_name[1];
     for(iterFind = option_group->map_entries_.begin();
         iterFind != option_group->map_entries_.end(); ++iterFind)
     {
-      const OptionGroup::CppOptionEntry& cppOptionEntry = iterFind->second;
+      const auto& cppOptionEntry = iterFind->second;
       if (cppOptionEntry.entry_ &&
           cppOptionEntry.entry_->get_short_name() == short_option_name)
         break;
@@ -222,7 +221,7 @@ gboolean OptionGroup::option_arg_callback(const gchar* option_name, const gchar*
     return false;
   }
 
-  const OptionGroup::CppOptionEntry& cppOptionEntry = iterFind->second;
+  const auto& cppOptionEntry = iterFind->second;
   if (cppOptionEntry.carg_type_ != G_OPTION_ARG_CALLBACK)
   {
     OptionError(OptionError::FAILED, "Glib::OptionGroup::option_arg_callback() "
@@ -230,20 +229,20 @@ gboolean OptionGroup::option_arg_callback(const gchar* option_name, const gchar*
     return false;
   }
 
-  const bool has_value = (value != 0);
+  const bool has_value = (value != nullptr);
   const OptionArgCallback* const option_arg =
     static_cast<const OptionArgCallback*>(cppOptionEntry.cpparg_);
   try
   {
     if (option_arg->is_filename_option())
     {
-      const OptionGroup::SlotOptionArgFilename* the_slot = option_arg->get_slot_filename();
+      const auto the_slot = option_arg->get_slot_filename();
       const std::string cpp_value(value ? value : "");
       return (*the_slot)(cpp_option_name, cpp_value, has_value);
     }
     else
     {
-      const OptionGroup::SlotOptionArgString* the_slot = option_arg->get_slot_string();
+      const auto the_slot = option_arg->get_slot_string();
       const Glib::ustring cpp_value(value ? value : "");
       return (*the_slot)(cpp_option_name, cpp_value, has_value);
     }
@@ -286,16 +285,16 @@ OptionGroup::OptionGroup(GOptionGroup* castitem)
 OptionGroup::~OptionGroup()
 {
   //Free any C types that were allocated during add_entry():
-  for(type_map_entries::iterator iter = map_entries_.begin(); iter != map_entries_.end(); ++iter)
+  for(auto& the_pair : map_entries_)
   {
-    CppOptionEntry& cpp_entry = iter->second;
+    auto& cpp_entry = the_pair.second;
     cpp_entry.release_c_arg();
   }
 
   if(has_ownership_)
   {
-    g_option_group_free(gobj());
-    gobject_ = 0;
+    g_option_group_unref(gobj());
+    gobject_ = nullptr;
   }
 }
 
@@ -375,35 +374,61 @@ void OptionGroup::add_entry_filename(const OptionEntry& entry, const SlotOptionA
 
 void OptionGroup::add_entry_with_wrapper(const OptionEntry& entry, GOptionArg arg_type, void* cpp_arg)
 {
-  const Glib::ustring name = entry.get_long_name();
+  const auto name = entry.get_long_name();
   type_map_entries::iterator iterFind = map_entries_.find(name);
-  if( iterFind == map_entries_.end() ) //If we have not added this entry already
+  if (iterFind == map_entries_.end()) //If we have not added this entry already
   {
     CppOptionEntry cppEntry;
     //g_option_group_add_entry() does not take its own copy, so we must keep the instance alive.
     cppEntry.entry_ = new OptionEntry(entry);
     //cppEntry.entry_ is deleted in release_c_arg(), via the destructor.
 
-    cppEntry.carg_type_ = arg_type;
-    cppEntry.allocate_c_arg();
-    cppEntry.set_c_arg_default(cpp_arg);
+    // Several options can refer to the same C++ variable,
+    // typically a pair of --enable-x / --disable-x options.
+    // Only one C variable shall be allocated for them.
+    // See https://bugzilla.gnome.org/show_bug.cgi?id=744854.
+    bool is_duplicate = false;
+    void* carg = nullptr;
+    if (arg_type != G_OPTION_ARG_CALLBACK)
+    {
+      for (type_map_entries::iterator iter = map_entries_.begin();
+           iter != map_entries_.end(); ++iter)
+      {
+        const auto& cpp_entry = iter->second;
+        if (cpp_entry.cpparg_ == cpp_arg &&
+            cpp_entry.carg_type_ == arg_type &&
+            cpp_entry.carg_)
+        {
+          is_duplicate = true;
+          carg = cpp_entry.carg_;
+          break;
+        }
+      }
+    }
 
+    cppEntry.carg_type_ = arg_type;
+    if (!is_duplicate)
+    {
+      cppEntry.allocate_c_arg();
+      cppEntry.set_c_arg_default(cpp_arg);
+      carg = cppEntry.carg_;
+    }
     cppEntry.cpparg_ = cpp_arg;
 
     //Give the information to the C API:
     cppEntry.entry_->gobj()->arg = arg_type;
-    cppEntry.entry_->gobj()->arg_data = cppEntry.carg_;
+    cppEntry.entry_->gobj()->arg_data = carg;
 
     //Remember the C++/C mapping so that we can use it later:
     map_entries_[name] = cppEntry;
 
     add_entry(*(cppEntry.entry_));
   }
-  else if( arg_type == G_OPTION_ARG_CALLBACK )
+  else if (arg_type == G_OPTION_ARG_CALLBACK)
   {
     //Delete the OptionArgCallback instance that was allocated by add_entry()
     //or add_entry_filename().
-    OptionArgCallback* option_arg = static_cast<OptionArgCallback*>(cpp_arg);
+    auto option_arg = static_cast<OptionArgCallback*>(cpp_arg);
     delete option_arg;
   }
 }
@@ -428,7 +453,7 @@ void OptionGroup::set_translate_func(const SlotTranslate& slot)
   // Create a copy of the slot. A pointer to this will be passed through the
   // callback's data parameter.  It will be deleted when
   // OptionGroup_Translate_glibmm_callback_destroy() is called.
-  SlotTranslate* slot_copy = new SlotTranslate(slot);
+  auto slot_copy = new SlotTranslate(slot);
   g_option_group_set_translate_func(gobj(),
     &OptionGroup_Translate_glibmm_callback, slot_copy,
     &OptionGroup_Translate_glibmm_callback_destroy);
@@ -448,13 +473,12 @@ void OptionGroup::CppOptionEntry::allocate_c_arg()
   //defaults based on the C++-typed arguments.
   switch(carg_type_)
   {
-    case G_OPTION_ARG_STRING: //The char* will be for UTF8 strins.
-    case G_OPTION_ARG_FILENAME: //The char* will be for strings in the current locale's encoding.
+    case G_OPTION_ARG_STRING: //The char* will be for UTF8 a string.
+    case G_OPTION_ARG_FILENAME: //The char* will be for a string in the current locale's encoding.
     {
       char** typed_arg = new char*;
       //The C code will allocate a char* and put it here, for us to g_free() later.
-      //Alternatively, set_c_arg_default() might allocate a char*, and the C code might or might not free and replace that.
-      *typed_arg = 0;
+      *typed_arg = nullptr;
       carg_ = typed_arg;
 
       break;
@@ -479,15 +503,16 @@ void OptionGroup::CppOptionEntry::allocate_c_arg()
     case G_OPTION_ARG_FILENAME_ARRAY:
     {
       char*** typed_arg = new char**;
+      //The C code will allocate a char** and put it here, for us to g_strfreev() later.
       *typed_arg = 0;
       carg_ = typed_arg;
 
       break;
     }
-    case G_OPTION_ARG_NONE: /* Actually a boolean. */
+    case G_OPTION_ARG_NONE: // Actually a boolean.
     {
       gboolean* typed_arg = new gboolean;
-      *typed_arg = 0;
+      *typed_arg = false;
       carg_ = typed_arg;
 
       break;
@@ -546,63 +571,16 @@ void OptionGroup::CppOptionEntry::set_c_arg_default(void* cpp_arg)
       break;
     }
     case G_OPTION_ARG_STRING:
-    {
-      Glib::ustring* typed_cpp_arg = static_cast<Glib::ustring*>(cpp_arg);
-      if(typed_cpp_arg && !typed_cpp_arg->empty())
-      {
-        const char** typed_c_arg = static_cast<const char**>(carg_);
-        *typed_c_arg = g_strdup(typed_cpp_arg->c_str()); //Freed in release_c_arg().
-      }
-      break;
-    }
     case G_OPTION_ARG_FILENAME:
-    {
-      std::string* typed_cpp_arg = static_cast<std::string*>(cpp_arg);
-      if(typed_cpp_arg && !typed_cpp_arg->empty())
-      {
-        const char** typed_c_arg = static_cast<const char**>(carg_);
-        *typed_c_arg = g_strdup(typed_cpp_arg->c_str()); //Freed in release_c_arg().
-      }
-      break;
-    }
     case G_OPTION_ARG_STRING_ARRAY:
-    {
-      std::vector<Glib::ustring>* typed_cpp_arg = static_cast<std::vector<Glib::ustring>*>(cpp_arg);
-      if(typed_cpp_arg)
-      {
-        std::vector<Glib::ustring>& vec = *typed_cpp_arg;
-        const char** array = static_cast<const char**>( g_malloc(sizeof(gchar*) * (vec.size() + 1)) );
-
-        for(std::vector<Glib::ustring>::size_type i = 0; i < vec.size(); ++i)
-        {
-          array[i] = g_strdup( vec[i].c_str() );
-        }
-
-        array[vec.size()] = 0;
-
-        const char*** typed_c_arg = static_cast<const char***>(carg_);
-        *typed_c_arg = array;
-      }
-      break;
-    }
     case G_OPTION_ARG_FILENAME_ARRAY:
     {
-      std::vector<std::string>* typed_cpp_arg = static_cast<std::vector<std::string>*>(cpp_arg);
-      if(typed_cpp_arg)
-      {
-        std::vector<std::string>& vec = *typed_cpp_arg;
-        const char** array = static_cast<const char**>( g_malloc(sizeof(gchar*) * (vec.size() + 1)) );
-
-        for(std::vector<Glib::ustring>::size_type i = 0; i < vec.size(); ++i)
-        {
-          array[i] = g_strdup( vec[i].c_str() );
-        }
-
-        array[vec.size()] = 0;
-
-        const char*** typed_c_arg = static_cast<const char***>(carg_);
-        *typed_c_arg = array;
-      }
+      // No need to set default values for string-valued options.
+      // If *carg_ is still 0, when convert_c_to_cpp() is called, just don't
+      // touch *cpparg_. Besides, setting default values in *carg_ can result
+      // in memory leaks, because glib would not free the strings before
+      // the char*'s are overwritten with pointers to newly allocated copies
+      // of the command option arguments.
       break;
     }
     case G_OPTION_ARG_CALLBACK:
@@ -640,8 +618,8 @@ void OptionGroup::CppOptionEntry::release_c_arg()
       case G_OPTION_ARG_FILENAME:
       {
         char** typed_arg = static_cast<char**>(carg_);
-        g_free(*typed_arg); //Free the char* string at type_arg, which was allocated by the C code.
-        delete typed_arg; //Delete the char** that we allocated in allocate_c_arg;
+        g_free(*typed_arg); //Free the char* string at typed_arg, if allocated by the C code.
+        delete typed_arg; //Delete the char** that we allocated in allocate_c_arg().
 
         break;
       }
@@ -662,10 +640,13 @@ void OptionGroup::CppOptionEntry::release_c_arg()
       case G_OPTION_ARG_STRING_ARRAY:
       case G_OPTION_ARG_FILENAME_ARRAY:
       {
-        delete (char**)carg_;
+        char*** typed_arg = static_cast<char***>(carg_);
+        g_strfreev(*typed_arg); //Free the array of strings and the array at typed_arg, if allocated by the C code.
+        delete typed_arg; //Delete the char*** that we allocated in allocate_c_arg().
+
         break;
       }
-      case G_OPTION_ARG_NONE: /* Actually a boolean. */
+      case G_OPTION_ARG_NONE: // Actually a boolean.
       {
         gboolean* typed_arg = static_cast<gboolean*>(carg_);
         delete typed_arg;
@@ -676,9 +657,9 @@ void OptionGroup::CppOptionEntry::release_c_arg()
       {
         //Delete the OptionArgCallback instance that was allocated by add_entry()
         //or add_entry_filename().
-        OptionArgCallback* option_arg = static_cast<OptionArgCallback*>(cpparg_);
+        auto option_arg = static_cast<OptionArgCallback*>(cpparg_);
         delete option_arg;
-        cpparg_ = 0;
+        cpparg_ = nullptr;
 
         break;
       }
@@ -688,7 +669,7 @@ void OptionGroup::CppOptionEntry::release_c_arg()
       }
     }
 
-    carg_ = 0;
+    carg_ = nullptr;
   }
 
   if(entry_)
@@ -697,31 +678,30 @@ void OptionGroup::CppOptionEntry::release_c_arg()
 
 void OptionGroup::CppOptionEntry::convert_c_to_cpp()
 {
+  if (!carg_)
+    return;
+
   switch(carg_type_)
   {
     case G_OPTION_ARG_STRING:
     {
       char** typed_arg = static_cast<char**>(carg_);
-      Glib::ustring* typed_cpp_arg = static_cast<Glib::ustring*>(cpparg_);
-      if(typed_arg && typed_cpp_arg)
+      auto typed_cpp_arg = static_cast<Glib::ustring*>(cpparg_);
+      if(typed_arg && *typed_arg && typed_cpp_arg)
       {
-        char* pch = *typed_arg;
-        (*typed_cpp_arg) = Glib::convert_const_gchar_ptr_to_ustring(pch);
-
-        break;
+        *typed_cpp_arg = *typed_arg;
       }
+      break;
     }
     case G_OPTION_ARG_FILENAME:
     {
       char** typed_arg = static_cast<char**>(carg_);
-      std::string* typed_cpp_arg = static_cast<std::string*>(cpparg_);
-      if(typed_arg && typed_cpp_arg)
+      auto typed_cpp_arg = static_cast<std::string*>(cpparg_);
+      if(typed_arg && *typed_arg && typed_cpp_arg)
       {
-        char* pch = *typed_arg;
-        (*typed_cpp_arg) = Glib::convert_const_gchar_ptr_to_stdstring(pch);
-
-        break;
+        *typed_cpp_arg = *typed_arg;
       }
+      break;
     }
     case G_OPTION_ARG_INT:
     {
@@ -736,12 +716,12 @@ void OptionGroup::CppOptionEntry::convert_c_to_cpp()
     case G_OPTION_ARG_STRING_ARRAY:
     {
       char*** typed_arg = static_cast<char***>(carg_);
-      vecustrings* typed_cpp_arg = static_cast<vecustrings*>(cpparg_);
-      if(typed_arg && typed_cpp_arg)
+      auto typed_cpp_arg = static_cast<vecustrings*>(cpparg_);
+      if(typed_arg && *typed_arg && typed_cpp_arg)
       {
         typed_cpp_arg->clear();
 
-        //The C array seems to be null-terminated.
+        //The C array is null-terminated.
         //Glib::StringArrayHandle array_handle(*typed_arg,  Glib::OWNERSHIP_NONE);
 
         //The SUN Forte compiler complains about this:
@@ -765,36 +745,34 @@ void OptionGroup::CppOptionEntry::convert_c_to_cpp()
         //So we do this:
 
         char** char_array_next = *typed_arg;
-        while(char_array_next && *char_array_next)
+        while(*char_array_next)
         {
           typed_cpp_arg->push_back(*char_array_next);
           ++char_array_next;
         }
       }
-
       break;
     }
     case G_OPTION_ARG_FILENAME_ARRAY:
     {
       char*** typed_arg = static_cast<char***>(carg_);
-      vecustrings* typed_cpp_arg = static_cast<vecustrings*>(cpparg_);
-      if(typed_arg && typed_cpp_arg)
+      auto typed_cpp_arg = static_cast<vecstrings*>(cpparg_);
+      if(typed_arg && *typed_arg && typed_cpp_arg)
       {
         typed_cpp_arg->clear();
 
         //See comments above about the SUN Forte and Tru64 compilers.
 
         char** char_array_next = *typed_arg;
-        while(char_array_next && *char_array_next)
+        while(*char_array_next)
         {
           typed_cpp_arg->push_back(*char_array_next);
           ++char_array_next;
         }
       }
-
       break;
     }
-    case G_OPTION_ARG_NONE: /* Actually a boolean. */
+    case G_OPTION_ARG_NONE: // Actually a boolean.
     {
       *(static_cast<bool*>(cpparg_)) = *(static_cast<gboolean*>(carg_));
       break;

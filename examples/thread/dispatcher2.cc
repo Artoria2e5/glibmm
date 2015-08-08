@@ -77,7 +77,7 @@ ThreadTimer::ThreadTimer()
   // Create a new Glib::Dispatcher that is attached to the default main context,
   signal_increment_ (),
   // This pointer will be initialized later by the 2nd thread.
-  signal_finished_ptr_ (NULL)
+  signal_finished_ptr_ (nullptr)
 {
   // Connect the cross-thread signal.
   signal_increment_.connect(sigc::mem_fun(*this, &ThreadTimer::timer_increment));
@@ -99,7 +99,7 @@ void ThreadTimer::launch()
       sigc::mem_fun(*this, &ThreadTimer::thread_function));
 
   // Wait for the 2nd thread's startup notification.
-  while(signal_finished_ptr_ == NULL)
+  while(!signal_finished_ptr_)
     startup_cond_.wait(startup_mutex_);
 }
 
@@ -109,10 +109,10 @@ void ThreadTimer::signal_finished_emit()
   signal_finished_ptr_->emit();
 
   // wait for the thread to join
-  if(thread_ != NULL)
+  if(thread_)
     thread_->join();
 
-  signal_finished_ptr_ = NULL;
+  signal_finished_ptr_ = nullptr;
 }
 
 void ThreadTimer::print() const
@@ -156,9 +156,9 @@ bool ThreadTimer::timeout_handler()
 void ThreadTimer::thread_function()
 {
   // create a new Main Context
-  Glib::RefPtr<Glib::MainContext> context = Glib::MainContext::create();
+  auto context = Glib::MainContext::create();
   // create a new Main Loop
-  Glib::RefPtr<Glib::MainLoop> mainloop = Glib::MainLoop::create(context, true);
+  auto mainloop = Glib::MainLoop::create(context, true);
 
   // attach a timeout handler, that is called every second, to the
   // newly created MainContext
@@ -189,7 +189,7 @@ ThreadTimer::type_signal_end ThreadTimer::signal_end_;
 
 ThreadDispatcher::ThreadDispatcher()
 : 
-  timer_ (NULL)
+  timer_ (nullptr)
 {
   std::cout << "Thread Dispatcher Example #2" << std::endl;
 

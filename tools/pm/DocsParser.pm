@@ -25,7 +25,7 @@ use XML::Parser;
 use strict;
 use warnings;
 
-# use Util;
+use Util;
 use Function;
 use GtkDefs;
 use Object;
@@ -112,18 +112,19 @@ sub parse_on_start($$%)
 
   $tag = lc($tag);
 
-  if($tag eq "function" or $tag eq "signal" or $tag eq "enum")
+  if($tag eq "function" or $tag eq "signal" or $tag eq "property" or $tag eq "enum")
   {
     if(defined $DocsParser::objCurrentFunction)
     {
       $objParser->xpcroak(
-        "\nClose a function, signal or enum tag before you open another one.");
+        "\nClose a function, signal, property or enum tag before you open another one.");
     }
 
     my $functionName = $attr{name};
 
-    # Change signal name from Class::a-signal-name to Class::a_signal_name.
-    $functionName =~ s/-/_/g if($tag eq "signal");
+    # Change signal name from Class::a-signal-name to Class::a_signal_name
+    # and property name from Class:a-property-name to Class:a_property_name
+    $functionName =~ s/-/_/g if ($tag eq "signal" or $tag eq "property");
 
     #Reuse existing Function, if it exists:
     #(For instance, if this is the override parse)
@@ -195,7 +196,7 @@ sub parse_on_end($$)
 
   $tag = lc($tag);
 
-  if($tag eq "function" or $tag eq "signal" or $tag eq "enum")
+  if($tag eq "function" or $tag eq "signal" or $tag eq "property" or $tag eq "enum")
   {
     # Store the Function structure in the array:
     my $functionName = $$DocsParser::objCurrentFunction{name};
@@ -233,20 +234,25 @@ sub parse_on_cdata($$)
   }
 }
 
-sub lookup_enum_documentation($$$)
+sub lookup_enum_documentation($$$$)
 {
-  my ($c_enum_name, $cpp_enum_name, $ref_flags) = @_;
+  my ($c_enum_name, $cpp_enum_name, $indent, $ref_flags) = @_;
   
   my @subst_in  = [];
   my @subst_out = [];
+  my $newin = "";
  
- # Get the substitutions.
+ # Get the substitutions, and recognize some flags too.
   foreach(@$ref_flags)
   {
     if(/^\s*s#([^#]+)#([^#]*)#\s*$/)
     {
       push(@subst_in,  $1);
       push(@subst_out, $2);
+    }
+    elsif(/^\s*newin(.*)/) #If newin is at the start.
+    {
+      $newin = string_unquote(string_trim($1));
     }
   }
 
@@ -285,19 +291,23 @@ sub lookup_enum_documentation($$$)
     $param =~ s/([a-zA-Z0-9]*(_[a-zA-Z0-9]+)*)_?/$1/g;
     if(length($desc) > 0)
     {
-      $desc =~ s/\n/ /g;
-      $desc =~ s/ $//;
-      $desc =~ s/^\s+//; # Chop off leading whitespace
+      # Chop off leading and trailing whitespace.
+      $desc =~ s/^\s+//;
+      $desc =~ s/\s+$//;
       $desc .= '.' unless($desc =~ /(?:^|\.)$/);
-      $docs .= "\@var $cpp_enum_name ${param}\n \u${desc}\n\n"; # \u = Convert next char to uppercase
+      $docs .= "\@var $cpp_enum_name ${param}\n\u${desc}\n\n"; # \u = Convert next char to uppercase
     }
   }
 
-  # Append the enum description docs.
-  $docs .= "\@enum $cpp_enum_name\n"; 
-  $docs .= $$objFunction{description};
+  # Replace @newin in the enum description, but don't in the element descriptions.
+  my $description = "\@enum $cpp_enum_name\n";
+  $description .= $$objFunction{description};
+  DocsParser::convert_docs_to_cpp($objFunction, \$description);
+  DocsParser::replace_or_add_newin(\$description, $newin);
 
+  # Append the enum description docs.
   DocsParser::convert_docs_to_cpp($objFunction, \$docs);
+  $docs .= "\n\n$description";
   DocsParser::add_m4_quotes(\$docs);
 
   # Escape the space after "i.e." or "e.g." in the brief description.
@@ -305,20 +315,21 @@ sub lookup_enum_documentation($$$)
   
   remove_example_code($c_enum_name, \$docs);
 
-  # Convert to Doxygen-style comment.
-  $docs =~ s/\n/\n \* /g;
-  $docs =  "\/\*\* " . $docs;
+  # Add indentation and an asterisk on all lines except the first.
+  # $docs does not contain leading "/**" and trailing "*/".
+  $docs =~ s/\n/\n${indent}\* /g;
 
   return $docs;
 }
 
-# $strCommentBlock lookup_documentation($strFunctionName, $deprecation_docs, $objCppfunc)
+# $strCommentBlock lookup_documentation($strFunctionName, $deprecation_docs, $newin, $objCppfunc)
 # The final objCppfunc parameter is optional.  If passed, it is used to
 # decide if the final C parameter should be omitted if the C++ method
-# has a slot parameter.
-sub lookup_documentation($$;$)
+# has a slot parameter. It is also used for converting C parameter names to
+# C++ parameter names in the documentation, if they differ.
+sub lookup_documentation($$$;$)
 {
-  my ($functionName, $deprecation_docs, $objCppfunc) = @_;
+  my ($functionName, $deprecation_docs, $newin, $objCppfunc) = @_;
 
   my $objFunction = $DocsParser::hasharrayFunctions{$functionName};
   if(!$objFunction)
@@ -335,18 +346,30 @@ sub lookup_documentation($$;$)
   }
 
   DocsParser::convert_docs_to_cpp($objFunction, \$text);
+  DocsParser::replace_or_add_newin(\$text, $newin);
   # A blank line, marking the end of a paragraph, is needed after @newin.
   # Most @newins are at the end of a function description.
   $text .= "\n";
 
-  #Add note about deprecation if we have specified that in our _WRAP_METHOD() call:
+  # Add note about deprecation if we have specified that in our _WRAP_METHOD(),
+  # _WRAP_SIGNAL(), _WRAP_PROPERTY() or _WRAP_CHILD_PROPERTY() call:
   if($deprecation_docs ne "")
   {
     $text .= "\n\@deprecated $deprecation_docs\n";
   }
 
-  DocsParser::append_parameter_docs($objFunction, \$text, $objCppfunc);
+  my %param_name_mappings = DocsParser::append_parameter_docs($objFunction, \$text, $objCppfunc);
   DocsParser::append_return_docs($objFunction, \$text);
+
+  # Convert C parameter names to C++ parameter names where they differ.
+  foreach my $key (keys %param_name_mappings)
+  {
+    $text =~ s/\@(param|a) $key\b/\@$1 $param_name_mappings{$key}/g;
+  }
+
+  # Remove leading and trailing white space.
+  $text = string_trim($text);
+
   DocsParser::add_m4_quotes(\$text);
 
   # Escape the space after "i.e." or "e.g." in the brief description.
@@ -375,7 +398,8 @@ sub remove_example_code($$)
     ($$text =~ s"<programlisting>.*?</programlisting>"\n[C example ellipted]"sg);
   $example_removals += ($$text =~ s"\|\[.*?]\|"\n[C example ellipted]"sg);
 
-  print STDERR "gmmproc: $main::source: $obj_name: Example code discarded.\n"
+  # See "MS Visual Studio" comment in gmmproc.in.
+  print STDERR "gmmproc, $main::source, $obj_name: Example code discarded.\n"
     if ($example_removals);
 }
 
@@ -396,51 +420,143 @@ sub add_m4_quotes($)
 
 # The final objCppfunc is optional.  If passed, it is used to determine
 # if the final C parameter should be omitted if the C++ method has a
-# slot parameter.
+# slot parameter. It is also used for converting C parameter names to
+# C++ parameter names in the documentation, if they differ.
 sub append_parameter_docs($$;$)
 {
   my ($obj_function, $text, $objCppfunc) = @_;
 
-  my @param_names = @{$$obj_function{param_names}};
+  my @docs_param_names = @{$$obj_function{param_names}};
   my $param_descriptions = \$$obj_function{param_descriptions};
-
-  # Strip first parameter if this is a method.
   my $defs_method = GtkDefs::lookup_method_dont_mark($$obj_function{name});
-  # the second alternative is for use with method-mappings meaning:
-  # this function is mapped into this Gtk::class
-  shift(@param_names) if(($defs_method && $$defs_method{class} ne "") ||
-                         ($$obj_function{mapped_class} ne ""));
+  my @c_param_names = $defs_method ? @{$$defs_method{param_names}} : @docs_param_names;
 
-  # Also skip first param if this is a signal.
-  shift(@param_names) if ($$obj_function{name} =~ /\w+::/);
+  # The information in
+  # $obj_function comes from the docs.xml file,
+  # $objCppfunc comes from _WRAP_METHOD() or _WRAP_SIGNAL() in the .hg file,
+  # $defs_method comes from the methods.defs file.
+
+  # Ideally @docs_param_names and @c_param_names are identical.
+  # In the real world the parameters in the C documentation are sometimes not
+  # listed in the same order as the arguments in the C function declaration.
+  # We try to handle that case to some extent. If no argument name is misspelt
+  # in either the docs or the C function declaration, it usually succeeds for
+  # methods, but not for signals. For signals there is no C function declaration
+  # to compare with. If the docs of some method or signal get badly distorted
+  # due to imperfections in the C docs, and it's difficult to get the C docs
+  # corrected, correct docs can be added to the docs_override.xml file.
+
+  # Skip first param if this is a signal.
+  if ($$obj_function{name} =~ /\w+::/)
+  {
+    shift(@docs_param_names);
+    shift(@c_param_names);
+  }
+  # Skip first parameter if this is a non-static method.
+  elsif (defined($objCppfunc))
+  {
+    if (!$$objCppfunc{static})
+    {
+      shift(@docs_param_names);
+      shift(@c_param_names);
+    }
+  }
+  # The second alternative is for use with method-mappings meaning:
+  # this function is mapped into this Gtk::class.
+  elsif (($defs_method && $$defs_method{class} ne "") ||
+         $$obj_function{mapped_class} ne "")
+  {
+    shift(@docs_param_names);
+    shift(@c_param_names);
+  }
+
 
   # Skip the last param if there is a slot because it would be a
   # gpointer user_data parameter.
-  pop(@param_names) if (defined($objCppfunc) && $$objCppfunc{slot_name});
-
-  foreach my $param (@param_names)
+  if (defined($objCppfunc) && $$objCppfunc{slot_name})
   {
-    if ($param ne "error" ) #We wrap GErrors as exceptions, so ignore these.
+    pop(@docs_param_names);
+    pop(@c_param_names);
+  }
+
+  # Skip the last param if it's an error output param.
+  if (scalar @docs_param_names && $docs_param_names[-1] eq "error")
+  {
+    pop(@docs_param_names);
+    pop(@c_param_names);
+  }
+
+  my $cpp_param_names;
+  my $param_mappings;
+  my $out_param_index = 1000; # No method has that many arguments, hopefully.
+  if (defined($objCppfunc))
+  {
+    $cpp_param_names = $$objCppfunc{param_names};
+    $param_mappings = $$objCppfunc{param_mappings}; # C name -> C++ index
+    if (exists $$param_mappings{OUT})
     {
-      my $desc = $$param_descriptions->{$param};
-
-      # Deal with callback parameters converting the docs to a slot
-      # compatible format.
-      if ($param eq "callback")
-      {
-        $param = "slot";
-        $$text =~ s/\@a callback/\@a slot/g;
-      }
-
-      $param =~ s/([a-zA-Z0-9]*(_[a-zA-Z0-9]+)*)_?/$1/g;
-      DocsParser::convert_docs_to_cpp($obj_function, \$desc);
-      if(length($desc) > 0)
-      {
-        $desc  .= '.' unless($desc =~ /(?:^|\.)$/);
-        $$text .= "\n\@param ${param} \u${desc}";
-      }
+      $out_param_index = $$param_mappings{OUT};
     }
   }
+  my %param_name_mappings; # C name -> C++ name
+
+  for (my $i = 0; $i < @docs_param_names; ++$i)
+  {
+    my $param = $docs_param_names[$i];
+    my $desc = $$param_descriptions->{$param};
+
+    if (defined($objCppfunc))
+    {
+      # If the C++ name is not equal to the C name, mark that the name
+      # shall be changed in the documentation.
+      my $cpp_name = $param;
+      if (exists $$param_mappings{$param})
+      {
+        # Rename and/or reorder declaration ({c_name} or {.}) in _WRAP_*().
+        $cpp_name = $$cpp_param_names[$$param_mappings{$param}];
+      }
+      elsif ($c_param_names[$i] eq $param)
+      {
+        # Location in docs coincides with location in C declaration.
+        my $cpp_index = $i;
+        $cpp_index++ if ($i >= $out_param_index);
+        $cpp_name = $$cpp_param_names[$cpp_index];
+      }
+      else
+      {
+        # Search for the param in the C declaration.
+        for (my $j = 0; $j < @c_param_names; ++$j)
+        {
+          if ($c_param_names[$j] eq $param)
+          {
+            my $cpp_index = $j;
+            $cpp_index++ if ($j >= $out_param_index);
+            $cpp_name = $$cpp_param_names[$cpp_index];
+            last;
+          }
+        }
+      }
+      if ($cpp_name ne $param)
+      {
+        $param_name_mappings{$param} = $cpp_name;
+      }
+    }
+    elsif ($param eq "callback")
+    {
+      # Deal with callback parameters converting the docs to a slot
+      # compatible format.
+      $param_name_mappings{$param} = "slot";
+    }
+
+    $param =~ s/([a-zA-Z0-9]*(_[a-zA-Z0-9]+)*)_?/$1/g;
+    DocsParser::convert_docs_to_cpp($obj_function, \$desc);
+    if(length($desc) > 0)
+    {
+      $desc  .= '.' unless($desc =~ /(?:^|\.)$/);
+      $$text .= "\n\@param ${param} \u${desc}";
+    }
+  }
+  return %param_name_mappings;
 }
 
 
@@ -513,14 +629,20 @@ sub convert_tags_to_doxygen($)
     s"<variablelist>\n?(.*?)</variablelist>\n?"&DocsParser::convert_variablelist($1)"esg;
 
     # Use our Doxygen @newin alias.
-    # If Since is not followed by a colon, substitute @newin only if it's
-    # in a sentence of its own at the end of the string. 
-    s/\bSince:\s*(\d+)\.(\d+)\.(\d+)\b\.?/\@newin{$1,$2,$3}/g;
-    s/\bSince:\s*(\d+)\.(\d+)\b\.?/\@newin{$1,$2}/g;
-    s/(\.\s+)Since\s+(\d+)\.(\d+)\.(\d+)\.?$/$1\@newin{$2,$3,$4}/;
-    s/(\.\s+)Since\s+(\d+)\.(\d+)\.?$/$1\@newin{$2,$3}/;
-
-    s"\b->\b"->"g;
+    # Accept "Since" with or without a following colon.
+    # Require the Since clause to be
+    # - at the end of the string,
+    # - at the end of a line and followed by a blank line, or
+    # - followed by "Deprecated".
+    # If none of these requirements is met, "Since" may be embedded inside
+    # a function description, referring to only a part of the description.
+    # See e.g. g_date_time_format() and gdk_cursor_new_from_pixbuf().
+    # Doxygen assumes that @newin is followed by a paragraph that describes
+    # what is new, but we don't use it that way.
+    my $first_part = '\bSince[:\h]\h*(\d+)\.(\d+)'; # \h == [\t ] (horizontal whitespace)
+    my $last_part = '\.?(\s*$|\h*\n\h*\n|\s+Deprecated)';
+    s/$first_part\.(\d+)$last_part/\@newin{$1,$2,$3}$4/g;
+    s/$first_part$last_part/\@newin{$1,$2}$3/g;
 
     # Doxygen is too dumb to handle &mdash;
     s"&mdash;" \@htmlonly&mdash;\@endhtmlonly "g;
@@ -537,6 +659,21 @@ sub convert_tags_to_doxygen($)
     # be Doxygen commands in the docs_override.xml.
     s"\\"\\\\"g;
     s"\\\\(throws?|param)\b"\\$1"g
+  }
+}
+
+# void replace_or_add_newin(\$text, $newin)
+# If $newin is not empty, replace the version numbers in an existing @newin
+# Doxygen alias, or add one if there is none.
+sub replace_or_add_newin($$)
+{
+  my ($text, $newin) = @_;
+
+  return if ($newin eq "");
+
+  if (!($$text =~ s/\@newin\{[\d,]+\}/\@newin{$newin}/))
+  {
+    $$text .= "\n\n\@newin{$newin}";
   }
 }
 
@@ -691,7 +828,7 @@ sub lookup_object_of_method($$)
     }
     else
     {
-      print "DocsParser.pm:lookup_object_of_method(): Warning: GtkDefs::lookup_object() failed for object name=" . $object . ", function name=" . $name . "\n";
+      print "DocsParser.pm: lookup_object_of_method(): Warning: GtkDefs::lookup_object() failed for object name=" . $object . ", function name=" . $name . "\n";
       print "  This may be a missing define-object in a *.defs file.\n"
     }
   }

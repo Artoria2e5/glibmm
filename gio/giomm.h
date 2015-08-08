@@ -114,8 +114,11 @@
 #include <giomm/resource.h>
 #include <giomm/seekable.h>
 #include <giomm/settings.h>
+#include <giomm/settingsschema.h>
+#include <giomm/settingsschemakey.h>
 #include <giomm/simpleaction.h>
 #include <giomm/simpleactiongroup.h>
+#include <giomm/simpleiostream.h>
 #include <giomm/simplepermission.h>
 #include <giomm/socket.h>
 #include <giomm/socketaddress.h>
@@ -129,6 +132,7 @@
 #include <giomm/socketsource.h>
 #include <giomm/srvtarget.h>
 #include <giomm/tcpconnection.h>
+#include <giomm/tcpwrapperconnection.h>
 #include <giomm/themedicon.h>
 #include <giomm/threadedsocketservice.h>
 #include <giomm/tlscertificate.h>

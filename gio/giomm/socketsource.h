@@ -45,7 +45,7 @@ public:
    * is equivalent to:
    * @code
    * bool io_handler(Glib::IOCondition io_condition) { ... }
-   * const Glib::RefPtr<Gio::SocketSource> socket_source = Gio::SocketSource::create(socket, Glib::IO_IN | Glib::IO_OUT);
+   * const auto socket_source = Gio::SocketSource::create(socket, Glib::IO_IN | Glib::IO_OUT);
    * socket_source->connect(sigc::ptr_fun(&io_handler));
    * socket_source->attach(Glib::MainContext::get_default());
    * @endcode
@@ -55,6 +55,7 @@ public:
    * object's MainContext runs.
    *
    * @newin{2,42}
+   *
    * @param slot A slot to call when polling @a socket results in an event that matches @a condition.
    * The event will be passed as a parameter to @a slot.
    * If <tt>io_handler()</tt> returns <tt>false</tt> the handler is disconnected.

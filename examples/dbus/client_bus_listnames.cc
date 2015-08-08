@@ -34,7 +34,7 @@ bool on_main_loop_idle()
 // method.
 void on_dbus_proxy_available(Glib::RefPtr<Gio::AsyncResult>& result)
 {
-  Glib::RefPtr<Gio::DBus::Proxy> proxy = Gio::DBus::Proxy::create_finish(result);
+  const auto proxy = Gio::DBus::Proxy::create_finish(result);
 
   if(!proxy)
   {
@@ -48,20 +48,20 @@ void on_dbus_proxy_available(Glib::RefPtr<Gio::AsyncResult>& result)
   {
     // The proxy's call method returns a tuple of the value(s) that the method
     // call produces so just get the tuple as a VariantContainerBase.
-    const Glib::VariantContainerBase result = proxy->call_sync("ListNames");
+    const auto call_result = proxy->call_sync("ListNames");
 
     // Now extract the single item in the variant container which is the
     // array of strings (the names).
-    Glib::Variant< std::vector<Glib::ustring> > names_variant;
-    result.get_child(names_variant);
+    Glib::Variant< std::vector<Glib::ustring>> names_variant;
+    call_result.get_child(names_variant);
 
     // Get the vector of strings.
-    std::vector<Glib::ustring> names = names_variant.get();
+    auto names = names_variant.get();
 
     std::cout << "The names on the message bus are:" << std::endl;
 
-    for(unsigned i = 0; i < names.size(); i++)
-      std::cout << names[i] << "." << std::endl;
+    for(const auto& i : names)
+      std::cout << i << "." << std::endl;
   }
   catch(const Glib::Error& error)
   {
@@ -81,7 +81,7 @@ int main(int, char**)
   loop = Glib::MainLoop::create();
 
   // Get the user session bus connection.
-  Glib::RefPtr<Gio::DBus::Connection> connection =
+  auto connection =
     Gio::DBus::Connection::get_sync(Gio::DBus::BUS_TYPE_SESSION);
 
   // Check for an unavailable connection.

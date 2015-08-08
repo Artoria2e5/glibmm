@@ -111,6 +111,8 @@ sub parse_and_build_output($)
     if ($token eq "_DEFS")     { $self->on_defs(); next;} #Read the defs file.
     if ($token eq "_IGNORE")     { $self->on_ignore(); next;} #Ignore a function.
     if ($token eq "_IGNORE_SIGNAL")     { $self->on_ignore_signal(); next;} #Ignore a signal.
+    if ($token eq "_IGNORE_PROPERTY")   { $self->on_ignore_property(); next;} #Ignore a property.
+    if ($token eq "_IGNORE_CHILD_PROPERTY") { $self->on_ignore_child_property(); next;} #Ignore a child property.
     if ($token eq "_WRAP_METHOD")     { $self->on_wrap_method(); next;}
     if ($token eq "_WRAP_METHOD_DOCS_ONLY")     { $self->on_wrap_method_docs_only(); next;}
     if ($token eq "_WRAP_CORBA_METHOD")     { $self->on_wrap_corba_method(); next;} #Used in libbonobo*mm.
@@ -471,23 +473,40 @@ sub on_ignore($)
   }
 }
 
-sub on_ignore_signal($)
+# void on_ignore_signal_or_property(\&lookup_function, $type)
+sub on_ignore_signal_or_property($$$)
 {
-  my ($self) = @_;
-  my $objOutputter = $$self{objOutputter};
+  my ($self, $lookup_function, $type) = @_;
   my $str = $self->extract_bracketed_text();
-  $str = string_trim($str);
-  $str = string_unquote($str);
   my @args = split(/\s+|,/,$str);
   foreach (@args)
   {
-    next if ($_ eq "");
-    my $objCsignal = GtkDefs::lookup_signal($$self{c_class}, $_); #Pretend that we've used it.
-    if(!$objCsignal)
+    my $name = string_unquote($_);
+    next if ($name eq "");
+    my $objCentity = $lookup_function->($$self{c_class}, $name); #Pretend that we've used it.
+    if (!$objCentity)
     {
-      $objOutputter->output_wrap_failed($_, "ignored signal defs lookup failed");
+      $$self{objOutputter}->output_wrap_failed($name, "ignored $type defs lookup failed");
     }
   }
+}
+
+sub on_ignore_signal($)
+{
+  my ($self) = @_;
+  $self->on_ignore_signal_or_property(\&GtkDefs::lookup_signal, "signal");
+}
+
+sub on_ignore_property($)
+{
+  my ($self) = @_;
+  $self->on_ignore_signal_or_property(\&GtkDefs::lookup_property, "property");
+}
+
+sub on_ignore_child_property($)
+{
+  my ($self) = @_;
+  $self->on_ignore_signal_or_property(\&GtkDefs::lookup_child_property, "child property");
 }
 
 ########################################
@@ -683,11 +702,12 @@ sub extract_bracketed_text($)
 
 ########################################
 ###  breaks up a string by commas (smart)
-# @strings string_split_commas($string)
-sub string_split_commas($)
+# @strings string_split_commas($string [, $ignore_quotes])
+sub string_split_commas($;$)
 {
-  my ($in) = @_;
+  my ($in, $ignore_quotes) = @_;
 
+  $ignore_quotes = 2 unless defined $ignore_quotes;
   my @out;
   my $level = 0;
   my $in_braces = 0;
@@ -701,10 +721,10 @@ sub string_split_commas($)
 
     next if ($t eq "");
 
-    # TODO: Delete the test for scalar(@out) >= 2 when we can stop accepting
+    # TODO: Delete the test for scalar(@out) >= $ignore_quotes when we can stop accepting
     # .hg files with unpaired quotes, such as _WRAP_PROPERTY("text_column, int).
     # See also TODO in extract_bracketed_text().
-    $in_quotes = !$in_quotes if ($t eq '"' and scalar(@out) >= 2);
+    $in_quotes = !$in_quotes if ($t eq '"' and scalar(@out) >= $ignore_quotes);
     if (!$in_quotes)
     {
       $in_braces++ if ($t eq "{");
@@ -931,6 +951,7 @@ sub on_wrap_method($)
   $$objCfunc{constversion} = 0;
   $$objCfunc{deprecated} = "";
   my $deprecation_docs = "";
+  my $newin = "";
   my $ifdef;
   while($#args >= 2) # If the optional ref/err/deprecated arguments are there.
   {
@@ -956,6 +977,10 @@ sub on_wrap_method($)
       {
         $deprecation_docs = string_unquote(string_trim($1));
       }
+    }
+    elsif($argRef =~ /^newin(.*)/) #If newin is at the start.
+    {
+      $newin = string_unquote(string_trim($1));
     }
     elsif($argRef =~ /^ifdef(.*)/) #If ifdef is at the start.
     {
@@ -989,7 +1014,7 @@ sub on_wrap_method($)
   else
   {
     $commentblock = DocsParser::lookup_documentation($argCFunctionName,
-      $deprecation_docs, $objCppfunc);
+      $deprecation_docs, $newin, $objCppfunc);
   }
 
   $objOutputter->output_wrap_meth($filename, $line_num, $objCppfunc, $objCfunc, $argCppMethodDecl, $commentblock, $ifdef);
@@ -1007,7 +1032,7 @@ sub on_wrap_method_docs_only($)
   my $line_num = $$self{line_num};
 
   my $str = $self->extract_bracketed_text();
-  my @args = string_split_commas($str);
+  my @args = string_split_commas($str, 1);
 
   my $entity_type = "method";
 
@@ -1038,8 +1063,8 @@ sub on_wrap_method_docs_only($)
     }
   }
 
-  # Extra ref needed?
   $$objCfunc{throw_any_errors} = 0;
+  my $newin = "";
   while($#args >= 1) # If the optional ref/err arguments are there.
   {
     my $argRef = string_trim(pop @args);
@@ -1047,11 +1072,14 @@ sub on_wrap_method_docs_only($)
     {
       $$objCfunc{throw_any_errors} = 1;
     }
+    elsif($argRef =~ /^newin(.*)/) #If newin is at the start.
+    {
+      $newin = string_unquote(string_trim($1));
+    }
   }
 
   my $commentblock = "";
-  $commentblock = DocsParser::lookup_documentation($argCFunctionName, "");
-
+  $commentblock = DocsParser::lookup_documentation($argCFunctionName, "", $newin);
   $objOutputter->output_wrap_meth_docs_only($filename, $line_num, $commentblock);
 }
 
@@ -1205,10 +1233,13 @@ sub on_wrap_signal($$)
   my $bNoDefaultHandler = 0;
   my $bCustomCCallback = 0;
   my $bRefreturn = 0;
-  my $ifdef;
+  my $ifdef = "";
   my $argDeprecated = "";
   my $deprecation_docs = "";
+  my $newin = "";
   my $exceptionHandler = "";
+  my $detail_name = "";
+  my $bTwoSignalMethods = 0;
 
   while($#args >= 2) # If optional arguments are there.
   {
@@ -1217,23 +1248,19 @@ sub on_wrap_signal($$)
     {
       $bCustomDefaultHandler = 1;
     }
-
-    if($argRef eq "no_default_handler")
+    elsif($argRef eq "no_default_handler")
     {
       $bNoDefaultHandler = 1;
     }
-
-    if($argRef eq "custom_c_callback")
+    elsif($argRef eq "custom_c_callback")
     {
       $bCustomCCallback = 1;
     }
-
-    if($argRef eq "refreturn")
+    elsif($argRef eq "refreturn")
     {
       $bRefreturn = 1;
     }
-
-    if($argRef =~ /^deprecated(.*)/) #If deprecated is at the start.
+    elsif($argRef =~ /^deprecated(.*)/) #If deprecated is at the start.
     {
       $argDeprecated = "deprecated";
 
@@ -1242,21 +1269,36 @@ sub on_wrap_signal($$)
         $deprecation_docs = string_unquote(string_trim($1));
       }
     }
-
+    elsif($argRef =~ /^newin(.*)/) #If newin is at the start.
+    {
+      $newin = string_unquote(string_trim($1));
+    }
     elsif($argRef =~ /^ifdef(.*)/) #If ifdef is at the start.
     {
     	$ifdef = $1;
     }
-    
     elsif($argRef =~ /^exception_handler\s+(.*)/) #If exception_handler at the start.
     {
-        $exceptionHandler = $1;
+      $exceptionHandler = $1;
+    }
+    elsif($argRef =~ /^detail_name\s+(.+)/) #If detail_name at the start.
+    {
+      $detail_name = $1;
+    }
+    elsif($argRef eq "two_signal_methods")
+    {
+      $bTwoSignalMethods = 1;
+    }
+    else
+    {
+      $self->error("_WRAP_SIGNAL: Invalid option '$argRef'.\n");
     }
   }
 
   $self->output_wrap_signal($argCppDecl, $argCName, $$self{filename}, $$self{line_num},
                             $bCustomDefaultHandler, $bNoDefaultHandler, $bCustomCCallback,
-                            $bRefreturn, $ifdef, $commentblock, $argDeprecated, $deprecation_docs, $exceptionHandler);
+                            $bRefreturn, $ifdef, $commentblock, $argDeprecated, $deprecation_docs,
+                            $newin, $exceptionHandler, $detail_name, $bTwoSignalMethods);
 }
 
 # void on_wrap_vfunc()
@@ -1279,6 +1321,7 @@ sub on_wrap_vfunc($)
   $argCName = string_unquote($argCName);
 
   my $refreturn = 0;
+  my $keep_return = 0;
   my $refreturn_ctype = 0;
   my $returnValue = "";
   my $exceptionHandler = "";
@@ -1298,6 +1341,12 @@ sub on_wrap_vfunc($)
     if($argRef eq "refreturn")
     {
       $refreturn = 1;
+    }
+    # Must a copy of the return value be kept, because the caller does not
+    # get its own copy?
+    elsif($argRef eq "keep_return")
+    {
+      $keep_return = 1;
     }
     elsif($argRef eq "refreturn_ctype")
     {
@@ -1354,7 +1403,7 @@ sub on_wrap_vfunc($)
   }
 
   $self->output_wrap_vfunc($argCppDecl, $argCName, $$self{filename}, $$self{line_num},
-                           $refreturn, $refreturn_ctype, $custom_vfunc,
+                           $refreturn, $keep_return, $refreturn_ctype, $custom_vfunc,
                            $custom_vfunc_callback, $ifdef, $errthrow,
                            $slot_name, $slot_callback, $no_slot_copy, $returnValue, $exceptionHandler);
 }
@@ -1452,6 +1501,7 @@ sub on_wrap_any_property($)
   #TODO: Reduce duplication with on_wrap_method():
   my $argDeprecated = "";
   my $deprecation_docs = "";
+  my $newin = "";
   while($#args >= 2) # If the optional arguments are there.
   {
     my $argRef = string_trim(pop @args);
@@ -1465,9 +1515,14 @@ sub on_wrap_any_property($)
         $deprecation_docs = string_unquote(string_trim($1));
       }
     }
+    elsif($argRef =~ /^newin(.*)/) #If newin is at the start.
+    {
+      $newin = string_unquote(string_trim($1));
+    }
   }
 
-  return ($filename, $line_num, $argPropertyName, $argCppType, $argDeprecated, $deprecation_docs);
+  return ($filename, $line_num, $argPropertyName, $argCppType,
+          $argDeprecated, $deprecation_docs, $newin);
 }
 
 sub on_wrap_property($)
@@ -1477,9 +1532,11 @@ sub on_wrap_property($)
 
   return unless ($self->check_for_eof());
 
-  my ($filename, $line_num, $argPropertyName, $argCppType, $argDeprecated, $deprecation_docs) = $self->on_wrap_any_property();
+  my ($filename, $line_num, $argPropertyName, $argCppType, $argDeprecated,
+      $deprecation_docs, $newin) = $self->on_wrap_any_property();
 
-  $objOutputter->output_wrap_property($filename, $line_num, $argPropertyName, $argCppType, $$self{c_class}, $argDeprecated, $deprecation_docs);
+  $objOutputter->output_wrap_property($filename, $line_num, $argPropertyName,
+    $argCppType, $$self{c_class}, $argDeprecated, $deprecation_docs, $newin);
 }
 
 sub on_wrap_child_property($)
@@ -1489,9 +1546,11 @@ sub on_wrap_child_property($)
 
   return unless ($self->check_for_eof());
 
-  my ($filename, $line_num, $argPropertyName, $argCppType, $argDeprecated, $deprecation_docs) = $self->on_wrap_any_property();
+  my ($filename, $line_num, $argPropertyName, $argCppType, $argDeprecated,
+      $deprecation_docs, $newin) = $self->on_wrap_any_property();
 
-  $objOutputter->output_wrap_child_property($filename, $line_num, $argPropertyName, $argCppType, $$self{c_class}, $argDeprecated, $deprecation_docs);
+  $objOutputter->output_wrap_child_property($filename, $line_num, $argPropertyName,
+    $argCppType, $$self{c_class}, $argDeprecated, $deprecation_docs, $newin);
 }
 
 sub output_wrap_check($$$$$$)
@@ -1515,12 +1574,14 @@ sub output_wrap_check($$$$$$)
 
 # void output_wrap($CppDecl, $signal_name, $filename, $line_num, $bCustomDefaultHandler,
 #                  $bNoDefaultHandler, $bCustomCCallback, $bRefreturn, $ifdef,
-#                  $commentblock, $deprecated, $deprecation_docs, $exceptionHandler)
-sub output_wrap_signal($$$$$$$$$$$$)
+#                  $commentblock, $deprecated, $deprecation_docs, $newin, $exceptionHandler,
+#                  $detail_name, $bTwoSignalMethods)
+sub output_wrap_signal($$$$$$$$$$$$$$$$$)
 {
   my ($self, $CppDecl, $signal_name, $filename, $line_num, $bCustomDefaultHandler,
       $bNoDefaultHandler, $bCustomCCallback, $bRefreturn, $ifdef,
-      $commentblock, $deprecated, $deprecation_docs, $exceptionHandler) = @_;
+      $commentblock, $deprecated, $deprecation_docs, $newin, $exceptionHandler,
+      $detail_name, $bTwoSignalMethods) = @_;
 
   #Some checks:
   return if ($self->output_wrap_check($CppDecl, $signal_name,
@@ -1554,7 +1615,8 @@ sub output_wrap_signal($$$$$$$$$$$$)
 
   $objOutputter->output_wrap_sig_decl($filename, $line_num, $objCSignal, $objCppSignal,
     $signal_name, $bCustomCCallback, $ifdef, $commentblock,
-    $deprecated, $deprecation_docs, $exceptionHandler);
+    $deprecated, $deprecation_docs, $newin, $exceptionHandler,
+    $detail_name, $bTwoSignalMethods);
 
   if($bNoDefaultHandler eq 0)
   {
@@ -1570,12 +1632,12 @@ sub output_wrap_signal($$$$$$$$$$$$)
 }
 
 # void output_wrap_vfunc($CppDecl, $vfunc_name, $filename, $line_num,
-#                  $refreturn, $refreturn_ctype,
+#                  $refreturn, $keep_return, $refreturn_ctype,
 #                  $custom_vfunc, $custom_vfunc_callback, $ifdef, $errthrow,
 #                  $slot_name, $slot_callback, $no_slot_copy, $returnValue, $exceptionHandler)
-sub output_wrap_vfunc($$$$$$$$$$$$$$)
+sub output_wrap_vfunc($$$$$$$$$$$$$$$$$)
 {
-  my ($self, $CppDecl, $vfunc_name, $filename, $line_num, $refreturn, $refreturn_ctype,
+  my ($self, $CppDecl, $vfunc_name, $filename, $line_num, $refreturn, $keep_return, $refreturn_ctype,
       $custom_vfunc, $custom_vfunc_callback, $ifdef, $errthrow,
       $slot_name, $slot_callback, $no_slot_copy, $returnValue, $exceptionHandler) = @_;
 
@@ -1608,6 +1670,7 @@ sub output_wrap_vfunc($$$$$$$$$$$$$$)
   # These macros are defined in vfunc.m4:
 
   $$objCppVfunc{rettype_needs_ref} = $refreturn;
+  $$objCppVfunc{keep_return} = $keep_return;
   $$objCppVfunc{return_value} = $returnValue;
   $$objCppVfunc{exception_handler} = $exceptionHandler;
   $$objCppVfunc{name} .= "_vfunc"; #All vfuncs should have the "_vfunc" suffix, and a separate easily-named invoker method.

@@ -66,10 +66,10 @@ int main(int, char**)
   // An exception will be thrown if the value is not in the file:
   try
   {
-    const std::vector<int> values = keyfile.get_integer_list("Another Group", "Numbers");
+    const auto values = keyfile.get_integer_list("Another Group", "Numbers");
 
-    for(std::vector<int>::const_iterator p = values.begin(); p != values.end(); ++p)
-      std::cout << "Number list value: item=" << *p << std::endl;
+    for(const auto& p : values)
+      std::cout << "Number list value: item=" << p << std::endl;
   }
   catch(const Glib::KeyFileError& ex)
   {

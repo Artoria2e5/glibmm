@@ -32,7 +32,7 @@ class Interface_Class;
 #endif
 
 // There is no base GInterface struct in Glib, though there is G_TYPE_INTERFACE enum value.
-class Interface : virtual public Glib::ObjectBase
+class GLIBMM_API Interface : virtual public Glib::ObjectBase
 {
 public:
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -62,6 +62,10 @@ public:
   explicit Interface(GObject* castitem);
   virtual ~Interface();
 
+  // noncopyable
+  Interface(const Interface&) = delete;
+  Interface& operator=(const Interface&) = delete;
+
   //void add_interface(GType gtype_implementer);
 
   // Hook for translating API
@@ -74,11 +78,6 @@ public:
 
   inline GObject* gobj()             { return gobject_; }
   inline const GObject* gobj() const { return gobject_; }
-
-private:
-  // noncopyable
-  Interface(const Interface&);
-  Interface& operator=(const Interface&);
 };
 
 RefPtr<ObjectBase> wrap_interface(GObject* object, bool take_copy = false);

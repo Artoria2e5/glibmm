@@ -199,6 +199,15 @@
   (construct-only #f)
 )
 
+(define-property is-busy
+  (of-object "GApplication")
+  (prop-type "GParamBoolean")
+  (docs "If this application is currently marked busy")
+  (readable #t)
+  (writable #f)
+  (construct-only #f)
+)
+
 ;; From GAppInfoMonitor
 
 (define-signal changed
@@ -409,15 +418,6 @@
   (readable #t)
   (writable #f)
   (construct-only #f)
-)
-
-(define-property context
-  (of-object "GFileMonitor")
-  (prop-type "GParamBoxed")
-  (docs "The main context to dispatch from")
-  (readable #f)
-  (writable #t)
-  (construct-only #t)
 )
 
 ;; From GFilenameCompleter
@@ -871,6 +871,15 @@
   (construct-only #t)
 )
 
+(define-property invert-boolean
+  (of-object "GPropertyAction")
+  (prop-type "GParamBoolean")
+  (docs "Whether to invert the value of a boolean property")
+  (readable #t)
+  (writable #t)
+  (construct-only #t)
+)
+
 ;; From GProxy
 
 ;; From GProxyAddress
@@ -1149,6 +1158,26 @@
   (readable #t)
   (writable #t)
   (construct-only #f)
+)
+
+;; From GSimpleIOStream
+
+(define-property input-stream
+  (of-object "GSimpleIOStream")
+  (prop-type "GParamObject")
+  (docs "The GInputStream to read from")
+  (readable #t)
+  (writable #t)
+  (construct-only #t)
+)
+
+(define-property output-stream
+  (of-object "GSimpleIOStream")
+  (prop-type "GParamObject")
+  (docs "The GOutputStream to write to")
+  (readable #t)
+  (writable #t)
+  (construct-only #t)
 )
 
 ;; From GSubprocess
@@ -1586,6 +1615,35 @@
   (construct-only #t)
 )
 
+;; From GNetworkMonitor
+
+(define-signal network-changed
+  (of-object "GNetworkMonitor")
+  (return-type "void")
+  (when "last")
+  (parameters
+    '("gboolean" "p0")
+  )
+)
+
+(define-property connectivity
+  (of-object "GNetworkMonitor")
+  (prop-type "GParamEnum")
+  (docs "Level of network connectivity")
+  (readable #t)
+  (writable #f)
+  (construct-only #f)
+)
+
+(define-property network-available
+  (of-object "GNetworkMonitor")
+  (prop-type "GParamBoolean")
+  (docs "Whether the network is available")
+  (readable #t)
+  (writable #f)
+  (construct-only #f)
+)
+
 ;; From GNetworkService
 
 (define-property service
@@ -1725,6 +1783,12 @@
   (writable #f)
   (construct-only #f)
 )
+
+;; GSettingsSchema is neither a GObject nor a GInterface. Not checked for signals and properties.
+
+;; GSettingsSchemaKey is neither a GObject nor a GInterface. Not checked for signals and properties.
+
+;; GSettingsSchemaSource is neither a GObject nor a GInterface. Not checked for signals and properties.
 
 ;; From GSimplePermission
 
@@ -1972,6 +2036,17 @@
   (construct-only #f)
 )
 
+;; From GTcpWrapperConnection
+
+(define-property base-io-stream
+  (of-object "GTcpWrapperConnection")
+  (prop-type "GParamObject")
+  (docs "The wrapped GIOStream")
+  (readable #t)
+  (writable #t)
+  (construct-only #t)
+)
+
 ;; From GTlsBackend
 
 ;; From GTlsCertificate
@@ -2044,7 +2119,7 @@
 (define-property use-ssl3
   (of-object "GTlsClientConnection")
   (prop-type "GParamBoolean")
-  (docs "Use SSL 3.0 rather than trying to use TLS 1.x")
+  (docs "Use fallback version of SSL/TLS rather than most recent version")
   (readable #t)
   (writable #t)
   (construct-only #f)
@@ -2210,6 +2285,16 @@
 ;; From GUnixConnection
 
 ;; From GSocketListener
+
+(define-signal event
+  (of-object "GSocketListener")
+  (return-type "void")
+  (when "last")
+  (parameters
+    '("GSocketListenerEvent" "p0")
+    '("GSocket*" "p1")
+  )
+)
 
 (define-property listen-backlog
   (of-object "GSocketListener")

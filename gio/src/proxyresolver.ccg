@@ -29,8 +29,8 @@ namespace Gio
 
 std::vector<Glib::ustring> ProxyResolver::lookup(const Glib::ustring& uri)
 {
-  GError* gerror = 0;
-  std::vector<Glib::ustring> retvalue =
+  GError* gerror = nullptr;
+  auto retvalue =
     Glib::ArrayHandler<Glib::ustring>::array_to_vector(g_proxy_resolver_lookup(gobj(), uri.c_str(), 0, &(gerror)), Glib::OWNERSHIP_DEEP);
   if(gerror)
     ::Glib::Error::throw_exception(gerror);
@@ -43,7 +43,7 @@ void ProxyResolver::lookup_async(const Glib::ustring& uri, const SlotAsyncReady&
   // Create a copy of the slot.
   // A pointer to it will be passed through the callback's data parameter
   // and deleted in the callback.
-  SlotAsyncReady* slot_copy = new SlotAsyncReady(slot);
+  auto slot_copy = new SlotAsyncReady(slot);
 
   g_proxy_resolver_lookup_async(gobj(),
     uri.c_str(),
@@ -57,7 +57,7 @@ void ProxyResolver::lookup_async(const Glib::ustring& uri, const SlotAsyncReady&
   // Create a copy of the slot.
   // A pointer to it will be passed through the callback's data parameter
   // and deleted in the callback.
-  SlotAsyncReady* slot_copy = new SlotAsyncReady(slot);
+  auto slot_copy = new SlotAsyncReady(slot);
 
   g_proxy_resolver_lookup_async(gobj(),
     uri.c_str(),

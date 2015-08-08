@@ -40,7 +40,7 @@ static Glib::Threads::Private<HandlerList> thread_specific_handler_list;
 
 static void glibmm_exception_warning(const GError* error)
 {
-  g_assert(error != 0);
+  g_assert(error != nullptr);
 
   g_critical("\n"
       "unhandled exception (type Glib::Error) in signal handler:\n"
@@ -99,7 +99,7 @@ sigc::connection add_exception_handler(const sigc::slot<void>& slot)
 }
 
 // internal
-void exception_handlers_invoke() throw()
+void exception_handlers_invoke() noexcept
 {
   // This function will be called from our GLib signal handler proxies
   // if an exception has been caught.  It's not possible to throw C++

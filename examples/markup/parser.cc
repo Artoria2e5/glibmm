@@ -26,7 +26,7 @@ namespace
 
 void file_get_contents(const std::string& filename, Glib::ustring& contents)
 {
-  const Glib::RefPtr<Glib::IOChannel> channel = Glib::IOChannel::create_from_file(filename, "r");
+  const auto channel = Glib::IOChannel::create_from_file(filename, "r");
   channel->read_to_end(contents);
 }
 
@@ -54,14 +54,14 @@ public:
   virtual ~DumpParser();
 
 protected:
-  virtual void on_start_element(Glib::Markup::ParseContext& context,
+  void on_start_element(Glib::Markup::ParseContext& context,
                                 const Glib::ustring&        element_name,
-                                const AttributeMap&         attributes);
+                                const AttributeMap&         attributes) override;
 
-  virtual void on_end_element(Glib::Markup::ParseContext& context,
-                              const Glib::ustring& element_name);
+  void on_end_element(Glib::Markup::ParseContext& context,
+                              const Glib::ustring& element_name) override;
 
-  virtual void on_text(Glib::Markup::ParseContext& context, const Glib::ustring& text);
+  void on_text(Glib::Markup::ParseContext& context, const Glib::ustring& text) override;
 
 private:
   int parse_depth_;
@@ -84,9 +84,9 @@ void DumpParser::on_start_element(Glib::Markup::ParseContext&,
   indent();
   std::cout << '<' << element_name;
 
-  for(AttributeMap::const_iterator p = attributes.begin(); p != attributes.end(); ++p)
+  for(const auto& p : attributes)
   {
-    std::cout << ' ' << p->first << "=\"" << p->second << '"';
+    std::cout << ' ' << p.first << "=\"" << p.second << '"';
   }
 
   std::cout << ">\n";

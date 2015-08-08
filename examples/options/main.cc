@@ -25,15 +25,17 @@ class ExampleOptionGroup : public Glib::OptionGroup
 public:
   ExampleOptionGroup();
 
-  virtual bool on_pre_parse(Glib::OptionContext& context, Glib::OptionGroup& group);
-  virtual bool on_post_parse(Glib::OptionContext& context, Glib::OptionGroup& group);
-  virtual void on_error(Glib::OptionContext& context, Glib::OptionGroup& group);
+private:
+  bool on_pre_parse(Glib::OptionContext& context, Glib::OptionGroup& group) override;
+  bool on_post_parse(Glib::OptionContext& context, Glib::OptionGroup& group) override;
+  void on_error(Glib::OptionContext& context, Glib::OptionGroup& group) override;
 
   bool on_option_arg_string(const Glib::ustring& option_name,
     const Glib::ustring& value, bool has_value);
   bool on_option_arg_filename(const Glib::ustring& option_name,
     const std::string& value, bool has_value);
 
+public:
   //These members should live as long as the OptionGroup to which they are added, 
   //and as long as the OptionContext to which that OptionGroup is added.
   int m_arg_foo;
@@ -221,17 +223,18 @@ int main(int argc, char** argv)
     
   //This one shows the results of multiple instance of the same option, such as --list=1 --list=a --list=b
   std::cout << "  list = ";
-  for(Glib::OptionGroup::vecustrings::const_iterator iter = group.m_arg_list.begin(); iter != group.m_arg_list.end(); ++iter)
+  for(const auto& i : group.m_arg_list)
+
   {
-    std::cout << *iter << ", ";
+    std::cout << i << ", ";
   }
   std::cout << std::endl;
 
   //This one shows the remaining arguments on the command line, which had no name= form:
   std::cout << "  remaining = ";
-  for(Glib::OptionGroup::vecustrings::const_iterator iter = group.m_remaining_list.begin(); iter != group.m_remaining_list.end(); ++iter)
+  for(const auto& i : group.m_remaining_list)
   {
-    std::cout << *iter << ", ";
+    std::cout << i << ", ";
   }
   std::cout << std::endl;
  

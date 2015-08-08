@@ -22,12 +22,23 @@
  * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+//This is not hidden by GLIBMM_DISABLE_DEPRECATED
+//because gtkmm-2.24 still uses this type in its public API.
+//Note that gtkmm-2.24 itself is completely deprecated, so we really
+//can remove this whole class some time soon.
+//#ifndef GLIBMM_DISABLE_DEPRECATED
+
 #include <glibmm/containers.h>
 
 namespace Glib
 {
 
 // This class has some pure virtual methods which need to be implemented by derived classes.
+
+/**
+ * @deprecated This class should no longer be necessary. It has not been used
+ * by glibmm or gtkmm since gtkmm-2.4.
+ */
 template< typename T_Child, typename T_CppElement, typename T_Iterator >
 class HelperList
 {
@@ -74,7 +85,7 @@ public:
   }
 
   inline size_type max_size() { return size_type(-1); }
-  inline bool empty() { return glist() == 0; }
+  inline bool empty() { return glist() == nullptr; }
 
   inline iterator begin()
     {return begin_();}
@@ -110,7 +121,7 @@ public:
   {
     size_type j = 0;
     iterator i;
-    for(i = begin(), j = 0; i != end(), j < l; ++i, ++j)
+    for(i = begin(), j = 0; i != end() && j < l; ++i, ++j)
       ;
     return (*i);
   }
@@ -161,6 +172,8 @@ protected:
 
 
 } /* namespace Glib */
+
+//#endif //GLIBMM_DISABLE_DEPRECATED
 
 #endif /* _GLIBMM_HELPERLIST_H */
 

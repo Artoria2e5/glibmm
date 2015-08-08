@@ -92,11 +92,11 @@ const Glib::Interface_Class& __CPPNAME__`'_Class::init()
 
 void __CPPNAME__`'_Class::iface_init_function(void* g_iface, void*)
 {
-  BaseClassType *const klass = static_cast<BaseClassType*>(g_iface);
+  const auto klass = static_cast<BaseClassType*>(g_iface);
 
   //This is just to avoid an "unused variable" warning when there are no vfuncs or signal handlers to connect.
   //This is a temporary fix until I find out why I can not seem to derive a GtkFileChooser interface. murrayc
-  g_assert(klass != 0); 
+  g_assert(klass != nullptr); 
 
 _IMPORT(SECTION_PCC_CLASS_INIT_VFUNCS)
 
@@ -117,7 +117,10 @@ define(`_END_CLASS_INTERFACE',`
 _SECTION(SECTION_HEADER1)
 _STRUCT_PROTOTYPE()
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 __NAMESPACE_BEGIN__ class __CPPNAME__`'_Class; __NAMESPACE_END__
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 _SECTION(SECTION_HEADER3)
 
 ifdef(`__BOOL_NO_WRAP_FUNCTION__',`dnl
@@ -231,13 +234,13 @@ public:
   typedef __CNAME__ BaseObjectType;
   typedef __CCLASS__ BaseClassType;
 
+  // noncopyable
+  __CPPNAME__`'(const __CPPNAME__&) = delete;
+  __CPPNAME__& operator=(const __CPPNAME__&) = delete;
+
 private:
   friend class __CPPNAME__`'_Class;
   static CppClassType `'__BASE__`'_class_;
-
-  // noncopyable
-  __CPPNAME__`'(const __CPPNAME__&);
-  __CPPNAME__& operator=(const __CPPNAME__&);
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 protected:

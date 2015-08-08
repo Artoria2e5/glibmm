@@ -1,5 +1,3 @@
-// -*- Mode: C++; indent-tabs-mode: nil; c-basic-offset: 2 -*-
-
 /* Copyright (C) 2011 The giomm Development Team
  *
  * This library is free software; you can redistribute it and/or
@@ -119,6 +117,7 @@ public:
    * See get_state_hint().
    * 
    * @newin{2,38}
+   *
    * @param value The new state.
    */
   template <typename T_Value>
@@ -180,6 +179,7 @@ public:
    * Detailed action names can have three formats. See parse_detailed_name_variant().
    *
    * @newin{2,40}
+   *
    * @param detailed_name A detailed action name.
    * @param[out] action_name The action name.
    * @param[out] target_value The target value.
@@ -214,21 +214,19 @@ public:
   _WRAP_PROPERTY("state", Glib::VariantBase)
   _WRAP_PROPERTY("state-type", Glib::VariantType)
 
-#m4 _CONVERSION(`Glib::ustring',`const gchar*',`g_strdup($3.c_str())')
-  _WRAP_VFUNC(Glib::ustring get_name() const, "get_name")
+#m4 _CONVERSION(`Glib::ustring',`const gchar*',`$3.c_str()')
+  _WRAP_VFUNC(Glib::ustring get_name() const, "get_name", keep_return)
 
-#m4 _CONVERSION(`Glib::VariantType',`const GVariantType*',`$3.gobj_copy()')
+#m4 _CONVERSION(`Glib::VariantType',`const GVariantType*',`$3.gobj()')
 
-  _WRAP_VFUNC(Glib::VariantType get_parameter_type() const, "get_parameter_type")
-  _WRAP_VFUNC(Glib::VariantType get_state_type() const, "get_state_type")
+  _WRAP_VFUNC(Glib::VariantType get_parameter_type() const, "get_parameter_type", keep_return)
+  _WRAP_VFUNC(Glib::VariantType get_state_type() const, "get_state_type", keep_return)
 
-#m4 _CONVERSION(`Glib::VariantBase',`GVariant*',`$3.gobj_copy()')
-
-  _WRAP_VFUNC(Glib::VariantBase get_state_hint() const, "get_state_hint")
+  _WRAP_VFUNC(Glib::VariantBase get_state_hint() const, "get_state_hint", refreturn_ctype)
 
   _WRAP_VFUNC(bool get_enabled() const, "get_enabled")
 
-  _WRAP_VFUNC(Glib::VariantBase get_state() const, "get_state")
+  _WRAP_VFUNC(Glib::VariantBase get_state() const, "get_state", refreturn_ctype)
 
 #m4 _CONVERSION(`GVariant*',`const Glib::VariantBase&',`Glib::wrap($3, true)')
   _WRAP_VFUNC(void change_state(const Glib::VariantBase& value), "change_state")
@@ -245,8 +243,8 @@ void Action::get_state(T_Value& value) const
   g_return_if_fail(
     g_variant_type_equal(g_action_get_state_type(const_cast<GAction*>(gobj())), type_glib_variant::variant_type().gobj()));
 
-  const Glib::VariantBase variantBase = get_state_variant();
-  const type_glib_variant variantDerived = variantBase.cast_dynamic<type_glib_variant>(variantBase);
+  const auto variantBase = get_state_variant();
+  const auto variantDerived = variantBase.cast_dynamic<type_glib_variant>(variantBase);
   value = variantDerived.get();
 }
 
@@ -257,13 +255,13 @@ void Action::get_state_hint(T_Value& value) const
 
   typedef Glib::Variant<T_Value> type_glib_variant;
 
-  const Glib::VariantBase variantBase = get_state_hint_variant();
+  const auto variantBase = get_state_hint_variant();
 
   // We can't check the type (a range) that will be returned before getting the range hint.
   g_return_if_fail(
     variantBase.is_of_type(type_glib_variant::variant_type()) );
 
-  const type_glib_variant variantDerived = variantBase.cast_dynamic<type_glib_variant>(variantBase);
+  const auto variantDerived = variantBase.cast_dynamic<type_glib_variant>(variantBase);
   value = variantDerived.get();
 }
 

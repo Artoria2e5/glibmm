@@ -115,7 +115,10 @@ ifdef(`__BOOL_NO_WRAP_FUNCTION__',`dnl
 _STRUCT_PROTOTYPE()
 ')dnl
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 __NAMESPACE_BEGIN__ class __CPPNAME__`'_Class; __NAMESPACE_END__
+#endif //DOXYGEN_SHOULD_SKIP_THIS
+
 _SECTION(SECTION_HEADER3)
 
 ifdef(`__BOOL_NO_WRAP_FUNCTION__',`dnl
@@ -245,10 +248,9 @@ private:')dnl endif
   friend class __CPPNAME__`'_Class;
   static CppClassType `'__BASE__`'_class_;
 
-private:
   // noncopyable
-  __CPPNAME__`'(const __CPPNAME__&);
-  __CPPNAME__& operator=(const __CPPNAME__&);
+  __CPPNAME__`'(const __CPPNAME__&) = delete;
+  __CPPNAME__& operator=(const __CPPNAME__&) = delete;
 
 protected:
   explicit __CPPNAME__`'(const Glib::ConstructParams& construct_params);

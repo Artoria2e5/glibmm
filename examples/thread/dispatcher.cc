@@ -29,7 +29,7 @@ namespace
 class ThreadProgress
 {
 public:
-  explicit ThreadProgress(int id);
+  explicit ThreadProgress(int the_id);
   virtual ~ThreadProgress();
 
   int  id() const;
@@ -78,10 +78,10 @@ public:
   void operator()(T ptr) const { delete ptr; }
 };
 
-ThreadProgress::ThreadProgress(int id)
+ThreadProgress::ThreadProgress(int the_id)
 :
-  thread_   (0),
-  id_       (id),
+  thread_   (nullptr),
+  id_       (the_id),
   progress_ (0)
 {
   // Connect to the cross-thread signal.
@@ -91,7 +91,7 @@ ThreadProgress::ThreadProgress(int id)
 ThreadProgress::~ThreadProgress()
 {
   // It is an error if the thread is still running at this point.
-  g_return_if_fail(thread_ == 0);
+  g_return_if_fail(thread_ == nullptr);
 }
 
 int ThreadProgress::id() const
@@ -134,7 +134,7 @@ void ThreadProgress::thread_function()
 {
   Glib::Rand rand;
 
-  for (int i = 0; i < ITERATIONS; ++i)
+  for (auto i = 0; i < ITERATIONS; ++i)
   {
     Glib::usleep(rand.get_int_range(2000, 20000));
 

@@ -1,4 +1,3 @@
-
 #
 # --------------------------- Signal Decl----------------------------
 #
@@ -14,15 +13,29 @@ dnl               $8 = `custom_c_callback (boolean)',
 dnl               $9 = `deprecated' (boolean),
 dnl               $10 = `refdoc_comment',
 dnl               $11 = ifdef,
-dnl               $12 = exceptionHandler)
+dnl               $12 = exceptionHandler,
+dnl               $13 = detail_name,
+dnl               $14 = two_signal_methods (boolean))
 
 define(`_SIGNAL_PROXY',`
 ifelse(`$11',,,`#ifdef $11'
 )dnl
 ifelse(`$9',,,`_DEPRECATE_IFDEF_START
 ')dnl
+ifelse($13,,`dnl no detail_name
 $10
   Glib::SignalProxy`'_NUM($6)< $5`'_COMMA_PREFIX($6) > signal_$4`'();
+',dnl detail_name
+$14,0,`dnl
+$10
+  Glib::SignalProxyDetailed`'_NUM($6)< $5`'_COMMA_PREFIX($6) > signal_$4`'(const Glib::ustring& $13 = Glib::ustring());
+',`dnl detail_name and two_signal_methods
+$10
+  Glib::SignalProxy`'_NUM($6)< $5`'_COMMA_PREFIX($6) > signal_$4`'();
+
+$10
+  Glib::SignalProxyDetailed`'_NUM($6)< $5`'_COMMA_PREFIX($6) > signal_$4`'(const Glib::ustring& $13);
+')dnl end detail_name
 ifelse(`$9',,,`_DEPRECATE_IFDEF_END
 ')dnl
 ifelse(`$11',,,`#endif // $11
@@ -54,25 +67,22 @@ static $2 __CPPNAME__`'_signal_$4_callback`'(__CNAME__`'* self, _COMMA_SUFFIX($3
   using namespace __NAMESPACE__;
   typedef sigc::slot< $5`'_COMMA_PREFIX($6) > SlotType;
 
-  __CPPNAME__* obj = dynamic_cast<__CPPNAME__*>(Glib::ObjectBase::_get_current_wrapper((GObject*) self));
+  auto obj = dynamic_cast<__CPPNAME__*>(Glib::ObjectBase::_get_current_wrapper((GObject*) self));
   // Do not try to call a signal on a disassociated wrapper.
   if(obj)
   {
-    #ifdef GLIBMM_EXCEPTIONS_ENABLED
     try
     {
-    #endif //GLIBMM_EXCEPTIONS_ENABLED
-      if(sigc::slot_base *const slot = Glib::SignalProxyNormal::data_to_slot`'(data))
+      if(const auto slot = Glib::SignalProxyNormal::data_to_slot`'(data))
 ifelse(`$2',void,`dnl
         (*static_cast<SlotType*>(slot))($7);
 ',`dnl else
         return _CONVERT($5,$2,`(*static_cast<SlotType*>(slot))($7)');
 ')dnl endif
-    #ifdef GLIBMM_EXCEPTIONS_ENABLED
     }
     catch(...)
     {
-ifelse($15, `', `dnl
+ifelse($12, `', `dnl
        Glib::exception_handlers_invoke`'();
 ', `dnl
        try
@@ -85,7 +95,6 @@ ifelse($15, `', `dnl
        }
 ')dnl
     }
-    #endif //GLIBMM_EXCEPTIONS_ENABLED
   }
 ifelse($2,void,,`dnl else
 
@@ -100,17 +109,14 @@ static $2 __CPPNAME__`'_signal_$4_notify_callback`'(__CNAME__`'* self, _COMMA_SU
   using namespace __NAMESPACE__;
   typedef sigc::slot< void`'_COMMA_PREFIX($6) > SlotType;
 
-  __CPPNAME__* obj = dynamic_cast<__CPPNAME__*>(Glib::ObjectBase::_get_current_wrapper((GObject*) self));
+  auto obj = dynamic_cast<__CPPNAME__*>(Glib::ObjectBase::_get_current_wrapper((GObject*) self));
   // Do not try to call a signal on a disassociated wrapper.
   if(obj)
   {
-    #ifdef GLIBMM_EXCEPTIONS_ENABLED
     try
     {
-    #endif //GLIBMM_EXCEPTIONS_ENABLED
-      if(sigc::slot_base *const slot = Glib::SignalProxyNormal::data_to_slot`'(data))
+      if(const auto slot = Glib::SignalProxyNormal::data_to_slot`'(data))
         (*static_cast<SlotType*>(slot))($7);
-    #ifdef GLIBMM_EXCEPTIONS_ENABLED
     }
     catch(...)
     {
@@ -127,7 +133,6 @@ ifelse($12, `', `dnl
       }
 ')dnl
     }
-    #endif //GLIBMM_EXCEPTIONS_ENABLED
   }
 
   typedef $2 RType;
@@ -155,10 +160,28 @@ ifelse(`$11',,,`#ifdef $11'
 )dnl
 ifelse(`$9',,,`_DEPRECATE_IFDEF_START
 ')dnl
+ifelse($13,,`dnl no detail_name
 Glib::SignalProxy`'_NUM($6)< $5`'_COMMA_PREFIX($6) > __CPPNAME__::signal_$4`'()
 {
   return Glib::SignalProxy`'_NUM($6)< $5`'_COMMA_PREFIX($6) >(this, &__CPPNAME__`'_signal_$4_info);
 }
+',dnl detail_name
+$14,0,`dnl
+Glib::SignalProxyDetailed`'_NUM($6)< $5`'_COMMA_PREFIX($6) > __CPPNAME__::signal_$4`'(const Glib::ustring& $13)
+{
+  return Glib::SignalProxyDetailed`'_NUM($6)< $5`'_COMMA_PREFIX($6) >(this, &__CPPNAME__`'_signal_$4_info, $13);
+}
+',`dnl detail_name and two_signal_methods
+Glib::SignalProxy`'_NUM($6)< $5`'_COMMA_PREFIX($6) > __CPPNAME__::signal_$4`'()
+{
+  return Glib::SignalProxy`'_NUM($6)< $5`'_COMMA_PREFIX($6) >(this, &__CPPNAME__`'_signal_$4_info);
+}
+
+Glib::SignalProxyDetailed`'_NUM($6)< $5`'_COMMA_PREFIX($6) > __CPPNAME__::signal_$4`'(const Glib::ustring& $13)
+{
+  return Glib::SignalProxyDetailed`'_NUM($6)< $5`'_COMMA_PREFIX($6) >(this, &__CPPNAME__`'_signal_$4_info, $13);
+}
+')dnl end detail_name
 ifelse(`$9',,,`_DEPRECATE_IFDEF_END
 ')dnl
 ifelse(`$11',,,`#endif // $11
@@ -212,7 +235,7 @@ $4 __CPPNAME__`'_Class::$2_callback`'($5)
 dnl  First, do a simple cast to ObjectBase. We will have to do a dynamic_cast
 dnl  eventually, but it is not necessary to check whether we need to call
 dnl  the vfunc.
-  Glib::ObjectBase *const obj_base = static_cast<Glib::ObjectBase*>(
+  const auto obj_base = static_cast<Glib::ObjectBase*>(
       Glib::ObjectBase::_get_current_wrapper`'((GObject*)$8));
 
 _IMPORT(SECTION_CHECK)
@@ -225,13 +248,11 @@ _IMPORT(SECTION_CHECK)
   {
 dnl  We need to do a dynamic cast to get the real object type, to call the
 dnl  C++ vfunc on it.
-    CppObjectType *const obj = dynamic_cast<CppObjectType* const>(obj_base);
+    const auto obj = dynamic_cast<CppObjectType* const>(obj_base);
     if(obj) // This can be NULL during destruction.
     {
-      #ifdef GLIBMM_EXCEPTIONS_ENABLED
       try // Trap C++ exceptions which would normally be lost because this is a C callback.
       {
-      #endif //GLIBMM_EXCEPTIONS_ENABLED
         // Call the virtual member method, which derived classes might override.
 ifelse($4,void,`dnl
         obj->on_$1`'($7);
@@ -239,16 +260,15 @@ ifelse($4,void,`dnl
 ',`dnl
         return _CONVERT($3,$4,`obj->on_$1`'($7)');
 ')dnl
-      #ifdef GLIBMM_EXCEPTIONS_ENABLED
       }
       catch(...)
       {
-ifelse($15, `', `dnl
+ifelse($11, `', `dnl
         Glib::exception_handlers_invoke`'();
 ', `dnl
         try
         {
-          return _CONVERT($3, $4, `obj->$15`'()');
+          return _CONVERT($3, $4, `obj->$11`'()');
         }
         catch(...)
         {
@@ -256,17 +276,16 @@ ifelse($15, `', `dnl
         }
 ')dnl
       }
-      #endif //GLIBMM_EXCEPTIONS_ENABLED
     }
   }
 
-  BaseClassType *const base = static_cast<BaseClassType*>(
+  const auto base = static_cast<BaseClassType*>(
 ifdef(`__BOOL_IS_INTERFACE__',`dnl
         _IFACE_PARENT_FROM_OBJECT($8)dnl
 ',`dnl
         _PARENT_GCLASS_FROM_OBJECT($8)dnl
 ')    );
-dnl    g_assert(base != 0);
+dnl    g_assert(base != nullptr);
 
   // Call the original underlying C function:
   if(base && base->$2)
@@ -306,13 +325,13 @@ ifelse(`$9',,,`#ifdef $9'
 )dnl
 $3 __NAMESPACE__::__CPPNAME__::on_$1`'($5)
 {
-  BaseClassType *const base = static_cast<BaseClassType*>(
+  const auto base = static_cast<BaseClassType*>(
 ifdef(`__BOOL_IS_INTERFACE__',`dnl
       _IFACE_PARENT_FROM_OBJECT(gobject_)dnl
 ',`dnl
       _PARENT_GCLASS_FROM_OBJECT(gobject_)dnl
 ')  );
-dnl  g_assert(base != 0);
+dnl  g_assert(base != nullptr);
 
   if(base && base->$2)
 ifelse($3,void,`dnl

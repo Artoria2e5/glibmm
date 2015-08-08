@@ -61,7 +61,7 @@ socket_address_to_string (const Glib::RefPtr<Gio::SocketAddress>& address)
     Glib::ustring str, res;
     int port;
 
-    Glib::RefPtr<Gio::InetSocketAddress> isockaddr =
+    auto isockaddr =
         Glib::RefPtr<Gio::InetSocketAddress>::cast_dynamic (address);
     if (!isockaddr)
         return Glib::ustring ();
@@ -90,7 +90,7 @@ ensure_condition (const Glib::RefPtr<Gio::Socket>& socket,
 
     if (use_source)
     {
-      Glib::RefPtr<Gio::SocketSource> source = socket->create_source(condition, cancellable);
+      auto source = socket->create_source(condition, cancellable);
       source->connect(sigc::ptr_fun(&source_ready));
       source->attach();
       loop->run();
@@ -154,7 +154,7 @@ main (int argc,
 
     if (argc != 2)
     {
-        const char* error_message = "Need to specify hostname";
+        const auto error_message = "Need to specify hostname";
         std::cerr << Glib::ustring::compose ("%1: %2\n", argv[0], error_message);
         return 1;
     }

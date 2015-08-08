@@ -25,11 +25,6 @@ _CONFIGINCLUDE(giommconfig.h)
 _DEFS(giomm,gio)
 _PINCLUDE(glibmm/private/object_p.h)
 
-#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
-#undef G_DISABLE_DEPRECATED
-#define GLIB_DISABLE_DEPRECATION_WARNINGS 1
-#m4 _POP()
-
 namespace Gio
 {
 
@@ -47,16 +42,16 @@ class Settings : public Glib::Object
   _CLASS_GOBJECT(Settings, GSettings, G_SETTINGS, Glib::Object, GObject)
 
 protected:
-  _WRAP_CTOR(Settings(const Glib::ustring& schema), g_settings_new)
-  _WRAP_CTOR(Settings(const Glib::ustring& schema, const Glib::ustring& path), g_settings_new_with_path)
-  //TODO: Requires SettingsBackend: _WRAP_CTOR(Settings(const Glib::ustring& schema, const Glib::RefPtr<SettingsBackend>& backend), g_settings_new_with_backend)
-  //TODO: Requires SettingsBackend: _WRAP_CTOR(Settings(const Glib::ustring& schema, const Glib::RefPtr<SettingsBackend>& backend, const Glib::ustring& path), g_settings_new_with_backend_and_path)
+  _WRAP_CTOR(Settings(const Glib::ustring& schema_id), g_settings_new)
+  _WRAP_CTOR(Settings(const Glib::ustring& schema_id, const Glib::ustring& path), g_settings_new_with_path)
+  //TODO: Requires SettingsBackend: _WRAP_CTOR(Settings(const Glib::ustring& schema_id, const Glib::RefPtr<SettingsBackend>& backend), g_settings_new_with_backend)
+  //TODO: Requires SettingsBackend: _WRAP_CTOR(Settings(const Glib::ustring& schema_id, const Glib::RefPtr<SettingsBackend>& backend, const Glib::ustring& path), g_settings_new_with_backend_and_path)
 
 public:
-  _WRAP_CREATE(const Glib::ustring& schema)
-  _WRAP_CREATE(const Glib::ustring& schema, const Glib::ustring& path)
-  //TODO: Requires SettingsBackend: _WRAP_CREATE(const Glib::ustring& schema, const Glib::RefPtr<SettingsBackend>& backend)
-  //TODO: Requires SettingsBackend: _WRAP_CREATE(const Glib::ustring& schema, const Glib::RefPtr<SettingsBackend>& backend, const Glib::ustring& path)
+  _WRAP_CREATE(const Glib::ustring& schema_id)
+  _WRAP_CREATE(const Glib::ustring& schema_id, const Glib::ustring& path)
+  //TODO: Requires SettingsBackend: _WRAP_CREATE(const Glib::ustring& schema_id, const Glib::RefPtr<SettingsBackend>& backend)
+  //TODO: Requires SettingsBackend: _WRAP_CREATE(const Glib::ustring& schema_id, const Glib::RefPtr<SettingsBackend>& backend, const Glib::ustring& path)
 
   //TODO: Rename these to get/set_*_value_variant() and add templated get/set_*_value() methods as elsewhere?
   _WRAP_METHOD(bool set_value(const Glib::ustring& key, const Glib::VariantBase& value),  g_settings_set_value)
@@ -181,7 +176,7 @@ _DEPRECATE_IFDEF_END
 
 #m4 _CONVERSION(`gchar**',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_DEEP)')
   _WRAP_METHOD(std::vector<Glib::ustring> list_children() const, g_settings_list_children)
-  _WRAP_METHOD(std::vector<Glib::ustring> list_keys() const, g_settings_list_keys)
+  _WRAP_METHOD(std::vector<Glib::ustring> list_keys() const, g_settings_list_keys, deprecated "Use SettingsSchema::list_kes().")
 
   _IGNORE(g_settings_get_range, g_settings_list_relocatable_schemas) // deprecated
 
@@ -211,8 +206,9 @@ _DEPRECATE_IFDEF_END
 
   //TODO?: _WRAP_SIGNAL(bool change_event(const Glib::ArrayHandle<Glib::QueryQuark>& keys, int n_keys), "change-event")
 
+  //TODO: Remove two_signal_methods when we can break ABI.
 #m4 _CONVERSION(`const char*',`const Glib::ustring&',__GCHARP_TO_USTRING)
-  _WRAP_SIGNAL(void changed(const Glib::ustring& key), "changed")
+  _WRAP_SIGNAL(void changed(const Glib::ustring& key), "changed", detail_name key, two_signal_methods)
 
   _WRAP_SIGNAL(bool writable_change_event(guint key), "writable-change-event")
   _WRAP_SIGNAL(void writable_changed(const Glib::ustring& key), writable_changed)

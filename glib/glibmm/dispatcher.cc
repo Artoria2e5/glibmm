@@ -127,6 +127,10 @@ class DispatchNotifier : public sigc::trackable
 public:
   ~DispatchNotifier();
 
+  // noncopyable
+  DispatchNotifier(const DispatchNotifier&) = delete;
+  DispatchNotifier& operator=(const DispatchNotifier&) = delete;
+
   static DispatchNotifier* reference_instance(
     const Glib::RefPtr<MainContext>& context, const Dispatcher* dispatcher);
   static void unreference_instance(
@@ -158,10 +162,6 @@ private:
   void create_pipe();
   bool pipe_io_handler(Glib::IOCondition condition);
   bool pipe_is_empty();
-
-  // noncopyable
-  DispatchNotifier(const DispatchNotifier&);
-  DispatchNotifier& operator=(const DispatchNotifier&);
 };
 
 /**** Glib::DispatchNotifier ***********************************************/
@@ -197,7 +197,7 @@ DispatchNotifier::DispatchNotifier(const Glib::RefPtr<MainContext>& context)
     //   sigc::mem_fun(*this, &DispatchNotifier::pipe_io_handler), fd, Glib::IO_IN);
     // except for source->set_can_recurse(true).
 
-    const Glib::RefPtr<IOSource> source = IOSource::create(fd, Glib::IO_IN);
+    const auto source = IOSource::create(fd, Glib::IO_IN);
 
     // If the signal emission in pipe_io_handler() starts a new main loop,
     // the event source shall not be blocked while that loop runs. (E.g. while

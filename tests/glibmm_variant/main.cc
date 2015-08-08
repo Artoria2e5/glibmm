@@ -26,10 +26,10 @@ int main(int, char**)
   for(guint i = 0; i < int_vector.size(); i++)
     ostr << int_vector[i] << std::endl;
 
-  Glib::Variant< std::vector<int> > integers_variant =
+  auto integers_variant =
     Glib::Variant< std::vector<int> >::create(int_vector);
 
-  std::vector<int> int_vector2 = integers_variant.get();
+  auto int_vector2 = integers_variant.get();
 
   ostr << "The size of the copied vector is " << int_vector2.size() <<
     '.' << std::endl;
@@ -53,7 +53,7 @@ int main(int, char**)
   //vector<std::string>:
   std::vector<std::string> vec_strings;
   vec_strings.push_back("a");
-  Glib::Variant<std::vector<std::string> > variant_vec_strings =
+  auto variant_vec_strings =
     Glib::Variant<std::vector<std::string> >::create(vec_strings);
 
   //Dict:
@@ -65,7 +65,7 @@ int main(int, char**)
   ostr << "The original dictionary entry is (" << dict_entry.first <<
     ", " << dict_entry.second << ")." << std::endl;
 
-  Glib::Variant<TypeDictEntry> dict_entry_variant =
+  auto dict_entry_variant =
     Glib::Variant<TypeDictEntry>::create(dict_entry);
 
   TypeDictEntry copy_entry = dict_entry_variant.get();
@@ -92,7 +92,7 @@ int main(int, char**)
     ostr << "(" << i << ", " << orig_dict[i] << ")." << std::endl;
   }
 
-  Glib::Variant<TypeDict> orig_dict_variant =
+  auto orig_dict_variant =
     Glib::Variant<TypeDict>::create(orig_dict);
 
   TypeDict dict_copy = orig_dict_variant.get();
@@ -106,7 +106,7 @@ int main(int, char**)
 
   index = 3;
 
-  std::pair<unsigned, Glib::ustring> a_pair = orig_dict_variant.get_child(index);
+  auto a_pair = orig_dict_variant.get_child(index);
 
   ostr << "Element number " << index + 1 << " in the variant is: (" <<
     a_pair.first << ", " << a_pair.second << ")." << std::endl;
@@ -134,7 +134,7 @@ int main(int, char**)
 
     Glib::ustring s = "String " + ss.str();
 
-    Glib::Variant<int> v = Glib::Variant<int>::create(i);
+    auto v = Glib::Variant<int>::create(i);
 
     complex_dict1.insert(
       std::pair< Glib::ustring, Glib::Variant<int> >("Map 1 " + s, v));
@@ -150,7 +150,7 @@ int main(int, char**)
   complex_vector.push_back(complex_dict1);
   complex_vector.push_back(complex_dict2);
 
-  Glib::Variant<ComplexVecType> complex_variant =
+  auto complex_variant =
     Glib::Variant<ComplexVecType>::create(complex_vector);
 
   // This will output the type string aa{sv}.
@@ -166,10 +166,8 @@ int main(int, char**)
 
     ComplexDictType map = copy_complex_vector[i];
 
-    for(ComplexDictType::const_iterator iter = map.begin();
-      iter != map.end(); iter++)
+    for(const auto& entry : map)
     {
-      std::pair< Glib::ustring, Glib::Variant<int> > entry = *iter;
       ostr << entry.first << " -> " << entry.second.get() << "." << std::endl;
     }
     ostr << std::endl;
@@ -189,7 +187,7 @@ static void test_dynamic_cast_ustring_types()
 
   try
   {
-    Glib::Variant<Glib::ustring> derived =
+    auto derived =
       Glib::VariantBase::cast_dynamic< Glib::Variant<Glib::ustring> >(vbase_string);
     ostr << "Casted string Glib::Variant<Glib::ustring>: " << derived.get() << std::endl;
   }
@@ -204,7 +202,7 @@ static void test_dynamic_cast_ustring_types()
 
   try
   {
-    Glib::Variant<Glib::ustring> derived =
+    auto derived =
       Glib::VariantBase::cast_dynamic< Glib::Variant<Glib::ustring> >(vbase_objectpath);
     ostr << "Casted object path Glib::Variant<Glib::ustring>: " << derived.get() << std::endl;
   }
@@ -218,7 +216,7 @@ static void test_dynamic_cast_ustring_types()
 
   try
   {
-    Glib::Variant<Glib::ustring> derived =
+    auto derived =
       Glib::VariantBase::cast_dynamic< Glib::Variant<Glib::ustring> >(vbase_signature);
     ostr << "Casted signature Glib::Variant<Glib::ustring>: " << derived.get() << std::endl;
   }
@@ -237,7 +235,7 @@ static void test_dynamic_cast_string_types()
 
   try
   {
-    Glib::Variant<std::string> derived =
+    auto derived =
       Glib::VariantBase::cast_dynamic< Glib::Variant<std::string> >(vbase_string);
     ostr << "Casted string Glib::Variant<std::string>: " << derived.get() << std::endl;
   }
@@ -252,7 +250,7 @@ static void test_dynamic_cast_string_types()
 
   try
   {
-    Glib::Variant<std::string> derived =
+    auto derived =
       Glib::VariantBase::cast_dynamic< Glib::Variant<std::string> >(vbase_objectpath);
     ostr << "Casted object path Glib::Variant<std::string>: " << derived.get() << std::endl;
   }
@@ -266,7 +264,7 @@ static void test_dynamic_cast_string_types()
 
   try
   {
-    Glib::Variant<std::string> derived =
+    auto derived =
       Glib::VariantBase::cast_dynamic< Glib::Variant<std::string> >(vbase_signature);
     ostr << "Casted signature Glib::Variant<std::string>: " << derived.get() << std::endl;
   }
@@ -276,11 +274,69 @@ static void test_dynamic_cast_string_types()
   }
 }
 
+// Test casting a complicated type, containing an object path and a DBus type signature.
+void test_dynamic_cast_composite_types()
+{
+  // Build a GVaraint of type a{oag}, and cast it to
+  // Glib::Variant<std::map<Glib::ustring, std::vector<std::string>>>.
+  // 'o' is VARIANT_TYPE_OBJECT_PATH and 'g' is VARIANT_TYPE_SIGNATURE.
+
+  GVariantBuilder dict_builder;
+  GVariantBuilder array_builder;
+  g_variant_builder_init(&dict_builder, G_VARIANT_TYPE("a{oag}"));
+
+  g_variant_builder_init(&array_builder, G_VARIANT_TYPE("ag"));
+  g_variant_builder_add(&array_builder, "g","id");
+  g_variant_builder_add(&array_builder, "g","isi");
+  g_variant_builder_add(&array_builder, "g","ia{si}");
+  g_variant_builder_add(&dict_builder, "{oag}", "/remote/object/path1", &array_builder);
+
+  g_variant_builder_init(&array_builder, G_VARIANT_TYPE("ag"));
+  g_variant_builder_add(&array_builder, "g","i(d)");
+  g_variant_builder_add(&array_builder, "g","i(si)");
+  g_variant_builder_add(&dict_builder, "{oag}", "/remote/object/path2", &array_builder);
+
+  Glib::VariantBase cppdict(g_variant_builder_end(&dict_builder));
+
+  try
+  {
+    typedef std::map<Glib::ustring, std::vector<std::string> > composite_type;
+    auto derived =
+      Glib::VariantBase::cast_dynamic<Glib::Variant<composite_type> >(cppdict);
+
+    ostr << "Cast composite type (get_type_string()=" << derived.get_type_string()
+         << ", variant_type().get_string()=" << derived.variant_type().get_string() << "): ";
+    composite_type var = derived.get();
+    for (const auto& the_pair : var)
+    {
+      ostr << "\n  " << the_pair.first << ":";
+      const auto& vec = the_pair.second;
+      for (const auto& str : vec)
+        ostr << "  " << str;
+    }
+    ostr << std::endl;
+  }
+  catch (const std::bad_cast& e)
+  {
+    g_assert_not_reached();
+  }
+
+  try
+  {
+    auto derived =
+      Glib::VariantBase::cast_dynamic<Glib::Variant<std::map<Glib::ustring, std::string> > >(cppdict);
+    g_assert_not_reached();
+  }
+  catch (const std::bad_cast& e)
+  {
+  }
+}
+
 static void test_dynamic_cast()
 {
-  Glib::Variant<int> v1 = Glib::Variant<int>::create(10);
+  auto v1 = Glib::Variant<int>::create(10);
   Glib::VariantBase& v2 = v1;
-  Glib::Variant<int> v3 = Glib::VariantBase::cast_dynamic<Glib::Variant<int> >(v2);
+  auto v3 = Glib::VariantBase::cast_dynamic<Glib::Variant<int> >(v2);
   g_assert(v3.get() == 10);
 
   Glib::VariantBase v5 = v1;
@@ -327,7 +383,7 @@ static void test_dynamic_cast()
 
   type_dict_sv var_map;
   type_map_sv map;
-  Glib::Variant<Glib::ustring> var_string =
+  auto var_string =
     Glib::Variant<Glib::ustring>::create("test variant");
   map["test key"] = var_string;
   var_map = type_dict_sv::create(map);
@@ -338,7 +394,7 @@ static void test_dynamic_cast()
 
   try
   {
-    Glib::Variant<std::map<Glib::ustring, Glib::ustring> > var_wrong_map =
+    auto var_wrong_map =
       Glib::VariantBase::cast_dynamic<Glib::Variant<std::map<Glib::ustring, Glib::ustring> > >(ref_var_base);
     g_assert_not_reached();
   }
@@ -351,14 +407,15 @@ static void test_dynamic_cast()
   g_assert(var_string.get() == "test variant");
 
   // A variant of type v
-  Glib::Variant<Glib::VariantBase> var_v = Glib::Variant<Glib::VariantBase>::create(var_string);
+  auto var_v = Glib::Variant<Glib::VariantBase>::create(var_string);
   g_assert(var_v.get_type_string() == "v");
-  Glib::Variant<Glib::ustring> var_s2 =
+  auto var_s2 =
     Glib::VariantBase::cast_dynamic<Glib::Variant<Glib::ustring> >(var_v.get());
   g_assert(var_s2.get() == "test variant");
 
   test_dynamic_cast_ustring_types();
   test_dynamic_cast_string_types();
+  test_dynamic_cast_composite_types();
 }
 
 static GLogLevelFlags

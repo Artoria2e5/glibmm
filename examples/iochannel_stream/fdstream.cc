@@ -265,7 +265,8 @@ std::streamsize fdstreambuf::xsgetn(char* dest, std::streamsize num)
 	  *putback_buffer = *(gptr() - 1);
 	  putback_count = 2;
 	}
-	else putback_count = 1;
+	else
+          putback_count = 1;
       }
 
       *(putback_buffer + 1) = *(dest + (chars_read - 1));
@@ -280,8 +281,8 @@ std::streamsize fdstreambuf::xsgetn(char* dest, std::streamsize num)
 }
 
 fdstream::fdstream(int fd, bool manage)
-: std::istream(0),
-  std::ostream(0),
+: std::istream(nullptr),
+  std::ostream(nullptr),
   buf(fd, manage)
 {
   std::istream::rdbuf(&buf);
@@ -289,8 +290,8 @@ fdstream::fdstream(int fd, bool manage)
 }
 
 fdstream::fdstream()
-: std::istream(0),
-  std::ostream(0)
+: std::istream(nullptr),
+  std::ostream(nullptr)
 {
   std::istream::rdbuf(&buf);
   std::ostream::rdbuf(&buf);

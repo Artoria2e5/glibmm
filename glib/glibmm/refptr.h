@@ -20,6 +20,8 @@
  */
 
 #include <glibmmconfig.h>
+#include <glib.h>
+#include <utility>
 
 namespace Glib
 {
@@ -66,7 +68,16 @@ public:
    *
    * This increments the shared reference count.
    */
-  inline RefPtr(const RefPtr<T_CppObject>& src);
+  inline RefPtr(const RefPtr& src);
+
+  /** Move constructor
+   */
+  inline RefPtr(RefPtr&& src);
+
+  /** Move constructor (from different, but castable type).
+   */
+  template <class T_CastFrom>
+  inline RefPtr(RefPtr<T_CastFrom>&& src);
 
   /** Copy constructor (from different, but castable type).
    *
@@ -80,23 +91,30 @@ public:
    * done safely without involving a reference/unreference cycle and is
    * therefore highly efficient.
    */
-  inline void swap(RefPtr<T_CppObject>& other);
+  inline void swap(RefPtr& other);
 
   /// Copy from another RefPtr:
-  inline RefPtr<T_CppObject>& operator=(const RefPtr<T_CppObject>& src);
+  inline RefPtr& operator=(const RefPtr& src);
+
+  /// Move assignment operator:
+  inline RefPtr& operator=(RefPtr&& src);
+
+  /// Move assignment operator (from different, but castable type):
+  template <class T_CastFrom>
+  inline RefPtr& operator=(RefPtr<T_CastFrom>&& src);
 
   /** Copy from different, but castable type).
    *
    * Increments the reference count.
    */
   template <class T_CastFrom>
-  inline RefPtr<T_CppObject>& operator=(const RefPtr<T_CastFrom>& src);
+  inline RefPtr& operator=(const RefPtr<T_CastFrom>& src);
 
   /// Tests whether the RefPtr<> point to the same underlying instance.
-  inline bool operator==(const RefPtr<T_CppObject>& src) const;
+  inline bool operator==(const RefPtr& src) const;
 
   /// See operator==().
-  inline bool operator!=(const RefPtr<T_CppObject>& src) const;
+  inline bool operator!=(const RefPtr& src) const;
 
   /** Dereferencing.
    *
@@ -125,6 +143,17 @@ public:
    */
   inline void reset();
 
+  /** Release the ownership of underlying instance.
+   *
+   * RefPtr's underlying instance is set to nullptr, therefore underlying object can't be accessed through this RefPtr anymore.
+   * @return an underlying instance.
+   *
+   * Most users should not use release(). It can spoil the automatic destruction
+   * of the managed object. A legitimate use is if you immediately give RefPtr's
+   * reference to another object.
+   */
+  inline T_CppObject* release() G_GNUC_WARN_UNUSED_RESULT;
+
   /** Dynamic cast to derived class.
    *
    * The RefPtr can't be cast with the usual notation so instead you can use
@@ -133,7 +162,7 @@ public:
    * @endcode
    */
   template <class T_CastFrom>
-  static inline RefPtr<T_CppObject> cast_dynamic(const RefPtr<T_CastFrom>& src);
+  static inline RefPtr cast_dynamic(const RefPtr<T_CastFrom>& src);
 
   /** Static cast to derived class.
    *
@@ -143,7 +172,7 @@ public:
    * @endcode
    */
   template <class T_CastFrom>
-  static inline RefPtr<T_CppObject> cast_static(const RefPtr<T_CastFrom>& src);
+  static inline RefPtr cast_static(const RefPtr<T_CastFrom>& src);
 
   /** Cast to non-const.
    *
@@ -153,7 +182,7 @@ public:
    * @endcode
    */
   template <class T_CastFrom>
-  static inline RefPtr<T_CppObject> cast_const(const RefPtr<T_CastFrom>& src);
+  static inline RefPtr cast_const(const RefPtr<T_CastFrom>& src);
 
   //TODO: Maybe remove these if we replace operator bool() with operator const void* after
   //an API/ABI break, as suggested by Daniel Elstner? murrayc.
@@ -168,16 +197,16 @@ public:
    * is still syntactically possible, but the result is semantically
    * wrong, as p1 REL_OP p2 is interpreted as (bool)p1 REL_OP (bool)p2.
    */
-  inline bool operator<(const RefPtr<T_CppObject>& src) const;
+  inline bool operator<(const RefPtr& src) const;
 
   /// See operator<().
-  inline bool operator<=(const RefPtr<T_CppObject>& src) const;
+  inline bool operator<=(const RefPtr& src) const;
 
   /// See operator<().
-  inline bool operator>(const RefPtr<T_CppObject>& src) const;
+  inline bool operator>(const RefPtr& src) const;
 
   /// See operator<().
-  inline bool operator>=(const RefPtr<T_CppObject>& src) const;
+  inline bool operator>=(const RefPtr& src) const;
 
 private:
   T_CppObject* pCppObject_;
@@ -215,12 +244,29 @@ RefPtr<T_CppObject>::RefPtr(T_CppObject* pCppObject)
 {}
 
 template <class T_CppObject> inline
-RefPtr<T_CppObject>::RefPtr(const RefPtr<T_CppObject>& src)
+RefPtr<T_CppObject>::RefPtr(const RefPtr& src)
 :
   pCppObject_ (src.pCppObject_)
 {
   if(pCppObject_)
     pCppObject_->reference();
+}
+
+template <class T_CppObject> inline
+RefPtr<T_CppObject>::RefPtr(RefPtr&& src)
+:
+  pCppObject_ (src.pCppObject_)
+{
+  src.pCppObject_ = nullptr;
+}
+
+template <class T_CppObject>
+  template <class T_CastFrom>
+inline
+RefPtr<T_CppObject>::RefPtr(RefPtr<T_CastFrom>&& src)
+:
+  pCppObject_ (src.release())
+{
 }
 
 // The templated ctor allows copy construction from any object that's
@@ -241,7 +287,7 @@ RefPtr<T_CppObject>::RefPtr(const RefPtr<T_CastFrom>& src)
 }
 
 template <class T_CppObject> inline
-void RefPtr<T_CppObject>::swap(RefPtr<T_CppObject>& other)
+void RefPtr<T_CppObject>::swap(RefPtr& other)
 {
   T_CppObject *const temp = pCppObject_;
   pCppObject_ = other.pCppObject_;
@@ -249,7 +295,7 @@ void RefPtr<T_CppObject>::swap(RefPtr<T_CppObject>& other)
 }
 
 template <class T_CppObject> inline
-RefPtr<T_CppObject>& RefPtr<T_CppObject>::operator=(const RefPtr<T_CppObject>& src)
+RefPtr<T_CppObject>& RefPtr<T_CppObject>::operator=(const RefPtr& src)
 {
   // In case you haven't seen the swap() technique to implement copy
   // assignment before, here's what it does:
@@ -280,6 +326,28 @@ RefPtr<T_CppObject>& RefPtr<T_CppObject>::operator=(const RefPtr<T_CppObject>& s
   return *this;
 }
 
+template <class T_CppObject> inline
+RefPtr<T_CppObject>& RefPtr<T_CppObject>::operator=(RefPtr&& src)
+{
+  RefPtr<T_CppObject> temp (std::move(src));
+  this->swap(temp);
+  src.pCppObject_ = nullptr;
+
+  return *this;
+}
+
+template <class T_CppObject>
+  template <class T_CastFrom>
+inline
+RefPtr<T_CppObject>& RefPtr<T_CppObject>::operator=(RefPtr<T_CastFrom>&& src)
+{
+  if (pCppObject_)
+    pCppObject_->unreference();
+  pCppObject_ = src.release();
+
+  return *this;
+}
+
 template <class T_CppObject>
   template <class T_CastFrom>
 inline
@@ -291,13 +359,13 @@ RefPtr<T_CppObject>& RefPtr<T_CppObject>::operator=(const RefPtr<T_CastFrom>& sr
 }
 
 template <class T_CppObject> inline
-bool RefPtr<T_CppObject>::operator==(const RefPtr<T_CppObject>& src) const
+bool RefPtr<T_CppObject>::operator==(const RefPtr& src) const
 {
   return (pCppObject_ == src.pCppObject_);
 }
 
 template <class T_CppObject> inline
-bool RefPtr<T_CppObject>::operator!=(const RefPtr<T_CppObject>& src) const
+bool RefPtr<T_CppObject>::operator!=(const RefPtr& src) const
 {
   return (pCppObject_ != src.pCppObject_);
 }
@@ -305,7 +373,7 @@ bool RefPtr<T_CppObject>::operator!=(const RefPtr<T_CppObject>& src) const
 template <class T_CppObject> inline
 RefPtr<T_CppObject>::operator bool() const
 {
-  return (pCppObject_ != 0);
+  return (pCppObject_ != nullptr);
 }
 
 #ifndef GLIBMM_DISABLE_DEPRECATED
@@ -321,6 +389,14 @@ void RefPtr<T_CppObject>::reset()
 {
   RefPtr<T_CppObject> temp; // swap with an empty RefPtr<> to clear *this
   this->swap(temp);
+}
+
+template <class T_CppObject> inline
+T_CppObject* RefPtr<T_CppObject>::release()
+{
+  T_CppObject *tmp = pCppObject_;
+  pCppObject_ = nullptr;
+  return tmp;
 }
 
 template <class T_CppObject>
@@ -363,25 +439,25 @@ RefPtr<T_CppObject> RefPtr<T_CppObject>::cast_const(const RefPtr<T_CastFrom>& sr
 }
 
 template <class T_CppObject> inline
-bool RefPtr<T_CppObject>::operator<(const RefPtr<T_CppObject>& src) const
+bool RefPtr<T_CppObject>::operator<(const RefPtr& src) const
 {
   return (pCppObject_ < src.pCppObject_);
 }
 
 template <class T_CppObject> inline
-bool RefPtr<T_CppObject>::operator<=(const RefPtr<T_CppObject>& src) const
+bool RefPtr<T_CppObject>::operator<=(const RefPtr& src) const
 {
   return (pCppObject_ <= src.pCppObject_);
 }
 
 template <class T_CppObject> inline
-bool RefPtr<T_CppObject>::operator>(const RefPtr<T_CppObject>& src) const
+bool RefPtr<T_CppObject>::operator>(const RefPtr& src) const
 {
   return (pCppObject_ > src.pCppObject_);
 }
 
 template <class T_CppObject> inline
-bool RefPtr<T_CppObject>::operator>=(const RefPtr<T_CppObject>& src) const
+bool RefPtr<T_CppObject>::operator>=(const RefPtr& src) const
 {
   return (pCppObject_ >= src.pCppObject_);
 }

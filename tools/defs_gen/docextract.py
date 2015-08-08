@@ -12,12 +12,17 @@ import sys, os, re
 # option being specified.
 no_since = False
 
+# Used to tell if extract() shall collect information from subdirectories.
+# This variable is modified from docextract_to_xml based on the --no-recursion
+# option being specified.
+no_recursion = False
+
 __all__ = ['extract']
 
 class GtkDoc:
     def __init__(self):
         self.name = None
-        # The block type ('function', 'signal', property', 'enum')
+        # The block type ('function', 'signal', property', 'section', 'enum')
         self.block_type = ''
         self.params = []
         self.annotations = []
@@ -65,6 +70,7 @@ function_name_pattern = re.compile(r'^([a-z]\w*)\s*:?(\s*\(.*\)\s*){0,2}\s*$')
 signal_name_pattern = re.compile(r'^([A-Z]\w+::[a-z0-9-]+)\s*:?(\s*\(.*\)\s*){0,2}\s*$')
 property_name_pattern = re.compile(r'^([A-Z]\w+:[a-z0-9-]+)\s*:?(\s*\(.*\)\s*){0,2}\s*$')
 enum_name_pattern = re.compile(r'^([A-Z]\w+)\s*:?(\s*\(.*\)\s*){0,2}\s*$')
+section_name_pattern = re.compile(r'^(SECTION:[a-z0-9_-]+)\s*:?(\s*\(.*\)\s*){0,2}\s*$')
 return_pattern = re.compile(r'^@?(returns:|return\s+value:)(.*\n?)$', re.IGNORECASE)
 deprecated_pattern = re.compile(r'^(deprecated\s*:\s*.*\n?)$', re.IGNORECASE)
 rename_to_pattern = re.compile(r'^(rename\s+to)\s*:\s*(.*\n?)$', re.IGNORECASE)
@@ -77,9 +83,13 @@ annotation_lead_pattern = re.compile(r'^\s*\(\s*(.*?)\s*\)\s*')
 
 # These patterns determine the identifier of the current comment block.  They
 # are grouped in a list for easy determination of block identifiers (in
-# skip_to_identifier).  The function_name_pattern should be tested for last
-# because it always matches signal and property identifiers.
-identifier_patterns = [ signal_name_pattern, property_name_pattern, enum_name_pattern, function_name_pattern ]
+# skip_to_identifier).
+# The function_name_pattern shall be tested for last, because it always matches
+# signal and property identifiers.
+# The property_name_pattern shall be tested for after the section_name_pattern,
+# because the property_name_pattern matches most section identifiers.
+identifier_patterns = [ signal_name_pattern, section_name_pattern,
+    property_name_pattern, enum_name_pattern, function_name_pattern ]
 
 # This pattern is to match return sections that forget to have a colon (':')
 # after the initial 'Return' phrase.  It is not included by default in the list
@@ -195,6 +205,8 @@ def skip_to_identifier(fp, line, cur_doc):
                 # Set the GtkDoc type.
                 if pattern == signal_name_pattern:
                     cur_doc.set_type('signal')
+                elif pattern == section_name_pattern:
+                    cur_doc.set_type('section')
                 elif pattern == property_name_pattern:
                     cur_doc.set_type('property')
                 elif pattern == enum_name_pattern:
@@ -450,8 +462,9 @@ def parse_dir(dir, doc_dict):
         if file in ('.', '..'): continue
         path = os.path.join(dir, file)
         if os.path.isdir(path):
-            parse_dir(path, doc_dict)
-        if len(file) > 2 and (file[-2:] == '.c' or file[-2:] == '.h'):
+            if not no_recursion:
+                parse_dir(path, doc_dict)
+        elif len(file) > 2 and file[-2:] in ('.c', '.h'):
             sys.stderr.write("Processing " + path + '\n')
             parse_file(open(path, 'r'), doc_dict)
 
@@ -504,6 +517,6 @@ def extract_tmpl(dirs, doc_dict=None):
             path = os.path.join(dir, file)
             if os.path.isdir(path):
                 continue
-            if len(file) > 2 and file[-2:] == '.sgml':
+            if len(file) > 5 and file[-5:] == '.sgml':
                 parse_tmpl(open(path, 'r'), doc_dict)
     return doc_dict

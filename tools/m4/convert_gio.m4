@@ -32,6 +32,8 @@ _CONV_ENUM(G,FileType)
 _CONV_ENUM(G,MountMountFlags)
 _CONV_ENUM(G,MountOperationResult)
 _CONV_ENUM(G,MountUnmountFlags)
+_CONV_ENUM(G,NetworkConnectivity)
+_CONV_ENUM(G,NotificationPriority)
 _CONV_ENUM(G,OutputStreamSpliceFlags)
 _CONV_ENUM(G,PasswordSave)
 _CONV_ENUM(G,ResolverRecordType)
@@ -240,6 +242,10 @@ _CONVERSION(`PasswordSave',`GPasswordSave',`($2)$3')
 #MountOperation
 #_CONVERSION(`GAskPasswordFlags',`AskPasswordFlags',`($2)$3')
 
+# NetworkMonitor
+_CONVERSION(`GNetworkMonitor*',`Glib::RefPtr<NetworkMonitor>',`Glib::wrap($3)')
+
+
 # Notification
 _CONVERSION(`GNotification*',`Glib::RefPtr<Notification>',`Glib::wrap($3)')
 _CONVERSION(`const Glib::RefPtr<Notification>&',`GNotification*',__CONVERT_CONST_REFPTR_TO_P)
@@ -261,6 +267,14 @@ _CONVERSION(`GResource*',`Glib::RefPtr<Resource>',`Glib::wrap($3)')
 _CONVERSION(`GSettings*',`Glib::RefPtr<Settings>',`Glib::wrap($3)')
 _CONVERSION(`const Glib::StringArrayHandle&',`const gchar*-const*',`($3).data()')
 _CONVERSION(`const Glib::RefPtr<SettingsBackend>&',`GSettingsBackend*',__CONVERT_REFPTR_TO_P)
+
+_CONVERSION(`GSettingsSchemaKey*',`Glib::RefPtr<SettingsSchemaKey>',`Glib::wrap($3)')
+_CONVERSION(`GSettingsSchemaKey*',`Glib::RefPtr<const SettingsSchemaKey>',`Glib::wrap($3)')
+
+_CONVERSION(`GSettingsSchema*',`Glib::RefPtr<SettingsSchema>',`Glib::wrap($3)')
+_CONVERSION(`GSettingsSchema*',`Glib::RefPtr<const SettingsSchema>',`Glib::wrap($3)')
+
+_CONVERSION(`GSettingsSchemaSource*',`Glib::RefPtr<SettingsSchemaSource>',`Glib::wrap($3)')
 
 
 #Socket

@@ -59,7 +59,7 @@ StreamIOChannel::~StreamIOChannel()
 
 IOStatus StreamIOChannel::read_vfunc(char* buf, gsize count, gsize& bytes_read)
 {
-  g_return_val_if_fail(stream_in_ != 0, IO_STATUS_ERROR);
+  g_return_val_if_fail(stream_in_ != nullptr, IO_STATUS_ERROR);
 
   stream_in_->clear();
   stream_in_->read(buf, count);
@@ -78,7 +78,7 @@ IOStatus StreamIOChannel::read_vfunc(char* buf, gsize count, gsize& bytes_read)
 
 IOStatus StreamIOChannel::write_vfunc(const char* buf, gsize count, gsize& bytes_written)
 {
-  g_return_val_if_fail(stream_out_ != 0, IO_STATUS_ERROR);
+  g_return_val_if_fail(stream_out_ != nullptr, IO_STATUS_ERROR);
 
   bytes_written = 0;
 
@@ -133,23 +133,23 @@ IOStatus StreamIOChannel::close_vfunc()
 {
   bool failed = false;
 
-  if(std::fstream *const stream = dynamic_cast<std::fstream*>(stream_in_))
+  if(std::fstream *const fstream = dynamic_cast<std::fstream*>(stream_in_))
   {
-    stream->clear();
-    stream->close();
-    failed = stream->fail();
+    fstream->clear();
+    fstream->close();
+    failed = fstream->fail();
   }
-  else if(std::ifstream *const stream = dynamic_cast<std::ifstream*>(stream_in_))
+  else if(std::ifstream *const ifstream = dynamic_cast<std::ifstream*>(stream_in_))
   {
-    stream->clear();
-    stream->close();
-    failed = stream->fail();
+    ifstream->clear();
+    ifstream->close();
+    failed = ifstream->fail();
   }
-  else if(std::ofstream *const stream = dynamic_cast<std::ofstream*>(stream_out_))
+  else if(std::ofstream *const ofstream = dynamic_cast<std::ofstream*>(stream_out_))
   {
-    stream->clear();
-    stream->close();
-    failed = stream->fail();
+    ofstream->clear();
+    ofstream->close();
+    failed = ofstream->fail();
   }
   else
   {
@@ -173,8 +173,8 @@ IOStatus StreamIOChannel::set_flags_vfunc(IOFlags)
 IOFlags StreamIOChannel::get_flags_vfunc()
 {
   gobj()->is_seekable  = 1;
-  gobj()->is_readable  = (stream_in_  != 0);
-  gobj()->is_writeable = (stream_out_ != 0);
+  gobj()->is_readable  = (stream_in_  != nullptr);
+  gobj()->is_writeable = (stream_out_ != nullptr);
 
   IOFlags flags = IO_FLAG_IS_SEEKABLE;
 
